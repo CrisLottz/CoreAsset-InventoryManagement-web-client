@@ -1,0 +1,26 @@
+# Dependencias
+node_modules/
+package-lock.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Salida de compilación de Astro (Producción)
+dist/
+.astro/
+
+# Variables de Entorno (¡CRÍTICO: NUNCA SUBIR EL .env!)
+.env
+.env.*
+!.env.example
+
+# Archivos de Sistema Operativo (Basura de Windows/Mac)
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs y Caché local
+logs
+*.log
+.eslintcache
