@@ -1,32 +1,47 @@
 import { useState, useEffect } from 'react';
+import { apiClient } from '../../services/apiClient';
 
 interface Asset {
     id: string;
-    serial_number: string;
-    model: string;
-    status: 'active' | 'maintenance' | 'retired';
+    internal_tag: string;
+    status: 'Operativo' | 'En Mantenimiento' | 'De Baja / Descartado';
     assigned_to: string | null;
+    assigned_user_name?: string | null; 
+    metadata_json?: {
+        serial_number?: string;
+        model?: string;
+        type?: string;
+    };
 }
 
-export const AssetTable = () => {
+interface AssetTableProps {
+    refreshTrigger?: number;
+}
+
+export const AssetTable = ({ refreshTrigger = 0 }: AssetTableProps) => {
     const [assets, setAssets] = useState<Asset[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [page, setPage] = useState(1);
 
     useEffect(() => {
-        const fetchMockData = () => {
+        const fetchInventory = async () => {
             setIsLoading(true);
-            setTimeout(() => {
-                setAssets([
-                    { id: '1', serial_number: 'LP-2026-001', model: 'Dell Latitude 7420', status: 'active', assigned_to: 'Marvin' },
-                    { id: '2', serial_number: 'MN-2026-045', model: 'Dell UltraSharp 27', status: 'maintenance', assigned_to: null },
-                    { id: '3', serial_number: 'LP-2026-012', model: 'ThinkPad T14', status: 'retired', assigned_to: null },
-                ]);
+            try {
+                const response = await apiClient.get('/assets/inventory/', {
+                    params: { page: page }
+                });
+                
+                const data = response.data.results || response.data;
+                setAssets(data);
+            } catch (error) {
+                console.error("Fallo de red o permisos al obtener inventario", error);
+                setAssets([]);
+            } finally {
                 setIsLoading(false);
-            }, 800);
+            }
         };
-        fetchMockData();
-    }, [page]);
+        fetchInventory();
+    }, [page, refreshTrigger]);
 
     return (
         <div className="space-y-4">
@@ -35,10 +50,10 @@ export const AssetTable = () => {
                     <table className="w-full text-sm text-left text-gray-700 dark:text-gray-300">
                         <thead className="bg-gray-50 dark:bg-gray-800 text-xs uppercase font-semibold text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
                             <tr>
-                                <th scope="col" className="px-6 py-4">Serial</th>
+                                <th scope="col" className="px-6 py-4">Tag / Serial</th>
                                 <th scope="col" className="px-6 py-4">Modelo</th>
                                 <th scope="col" className="px-6 py-4">Estado</th>
-                                <th scope="col" className="px-6 py-4">Asignado a</th>
+                                <th scope="col" className="px-6 py-4">Custodia</th>
                                 <th scope="col" className="px-6 py-4 text-right">Acciones</th>
                             </tr>
                         </thead>
@@ -55,23 +70,41 @@ export const AssetTable = () => {
                             ) : (
                                 assets.map((asset) => (
                                     <tr key={asset.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors duration-200">
+                                        
                                         <td className="px-6 py-4 font-medium text-gray-900 dark:text-white whitespace-nowrap">
-                                            {asset.serial_number}
+                                            <div className="flex flex-col">
+                                                <span className="font-bold">{asset.internal_tag}</span>
+                                                <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                                    SN: {asset.metadata_json?.serial_number || 'N/A'}
+                                                </span>
+                                            </div>
                                         </td>
-                                        <td className="px-6 py-4">{asset.model}</td>
+                                        
+                                        <td className="px-6 py-4">
+                                            {asset.metadata_json?.model || <span className="text-gray-400 italic">N/A</span>}
+                                        </td>
+                                        
                                         <td className="px-6 py-4">
                                             <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
-                                                asset.status === 'active' ? 'bg-green-50 text-semantic-success border-green-200 dark:bg-green-900/20 dark:border-green-900/50' :
-                                                asset.status === 'maintenance' ? 'bg-yellow-50 text-semantic-warning border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-900/50' :
+                                                asset.status === 'Operativo' ? 'bg-green-50 text-semantic-success border-green-200 dark:bg-green-900/20 dark:border-green-900/50' :
+                                                asset.status === 'En Mantenimiento' ? 'bg-yellow-50 text-semantic-warning border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-900/50' :
                                                 'bg-red-50 text-semantic-error border-red-200 dark:bg-red-900/20 dark:border-red-900/50'
                                             }`}>
-                                                {asset.status === 'active' && <span className="w-1.5 h-1.5 rounded-full bg-semantic-success" aria-hidden="true"></span>}
-                                                {asset.status === 'maintenance' && <span className="w-1.5 h-1.5 rounded-full bg-semantic-warning" aria-hidden="true"></span>}
-                                                {asset.status === 'retired' && <span className="w-1.5 h-1.5 rounded-full bg-semantic-error" aria-hidden="true"></span>}
+                                                {asset.status === 'Operativo' && <span className="w-1.5 h-1.5 rounded-full bg-semantic-success" aria-hidden="true"></span>}
+                                                {asset.status === 'En Mantenimiento' && <span className="w-1.5 h-1.5 rounded-full bg-semantic-warning" aria-hidden="true"></span>}
+                                                {asset.status === 'De Baja / Descartado' && <span className="w-1.5 h-1.5 rounded-full bg-semantic-error" aria-hidden="true"></span>}
+                                                
                                                 {asset.status.toUpperCase()}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4">{asset.assigned_to || <span className="text-gray-400 italic">No asignado</span>}</td>
+                                        
+                                        <td className="px-6 py-4">
+                                            {asset.assigned_user_name 
+                                                ? <span className="font-medium text-gray-900 dark:text-white">{asset.assigned_user_name}</span> 
+                                                : <span className="text-gray-400 italic text-sm">En Bodega</span>
+                                            }
+                                        </td>
+                                        
                                         <td className="px-6 py-4 text-right">
                                             <button className="text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 font-medium text-sm focus:outline-none focus:underline">
                                                 Gestionar
