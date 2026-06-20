@@ -1,0 +1,14 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import { InventoryView } from '../../components/inventory/InventoryView';
+
+// Capturamos el ID de la categoría desde la URL
+const { categoryId } = Astro.params;
+---
+
+<DashboardLayout title="Inventario Dinámico">
+    <div class="max-w-7xl mx-auto">
+        {/* Le pasamos el ID al componente padre de React */}
+        <InventoryView categoryId={categoryId} client:load />
+    </div>
+</DashboardLayout>
