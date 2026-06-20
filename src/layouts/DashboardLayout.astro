@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
 import { UserMenuIsland } from '../components/auth/UserMenuIsland';
+import { SidebarIsland } from '../components/navigation/SidebarIsland'; // <--- Nueva importación
 
 interface Props {
     title: string;
@@ -24,14 +25,8 @@ const { title } = Astro.props;
                 <span class="text-xl font-bold tracking-tight text-primary-600 dark:text-primary-400">CoreAsset</span>
             </div>
             
-            <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-                <a href="/dashboard" class="flex items-center px-3 py-2 text-sm font-medium rounded-md bg-primary-50 text-primary-700 dark:bg-gray-800 dark:text-primary-400">
-                    Panel Principal
-                </a>
-                <a href="/inventory" class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800">
-                    Inventario Activo
-                </a>
-            </nav>
+            {/* INYECCIÓN: Componente Reactivo del Sidebar */}
+            <SidebarIsland client:load />
 
             <div class="p-4 border-t border-gray-200 dark:border-gray-700">
                  <UserMenuIsland client:load />
