@@ -16,19 +16,33 @@ interface AssetTableProps {
     structure: any; 
     refreshTrigger?: number;
     onEditAsset: (asset: Asset) => void;
+    searchQuery: string;
+    searchField: string; // <-- NUEVO PROP
+    ordering: string;
+    visibleColumns?: string[];
 }
 
-export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAsset }: AssetTableProps) => {
+export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAsset, searchQuery, searchField, ordering, visibleColumns }: AssetTableProps) => {
     const [assets, setAssets] = useState<Asset[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [page, setPage] = useState(1);
+
+    useEffect(() => {
+        setPage(1);
+    }, [searchQuery, searchField, ordering, categoryId]);
 
     useEffect(() => {
         const fetchInventory = async () => {
             setIsLoading(true);
             try {
                 const response = await apiClient.get('/assets/inventory/', {
-                    params: { page: page, category: categoryId }
+                    params: { 
+                        page: page, 
+                        category: categoryId,
+                        search: searchQuery || undefined,
+                        search_field: searchField, // <-- SE ENVÍA AL BACKEND
+                        ordering: ordering
+                    }
                 });
                 
                 const data = response.data.results || response.data;
@@ -40,15 +54,17 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
                 setIsLoading(false);
             }
         };
-        fetchInventory();
-    }, [categoryId, page, refreshTrigger]);
+        
+        const timeoutId = setTimeout(() => fetchInventory(), 300);
+        return () => clearTimeout(timeoutId);
+        
+    }, [categoryId, page, refreshTrigger, searchQuery, searchField, ordering]);
 
     const renderCellContent = (asset: Asset, field: any) => {
         if (field.field_type === 'EMPLOYEE') return asset.assigned_employee_name || <span className="text-gray-400 italic">Unassigned</span>;
         if (field.field_type === 'LOCATION') return asset.location_name || <span className="text-gray-400 italic">Unknown</span>;
 
         const rawValue = asset.dynamic_data?.[field.name];
-        
         if (!rawValue) return <span className="text-gray-400 italic text-sm">-</span>;
 
         if (field.field_type === 'COLOR_STATUS') {
@@ -56,7 +72,6 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
             const label = optionMeta?.label || rawValue;
             const colorName = optionMeta?.color?.toLowerCase() || 'gray'; 
             
-            // Diccionario anti-purge para que Tailwind respete las clases construidas
             const themeMap: Record<string, { bg: string, text: string, border: string, dot: string }> = {
                 green: { bg: 'bg-green-50 dark:bg-green-900/20', text: 'text-green-700 dark:text-green-400', border: 'border-green-200 dark:border-green-900/50', dot: 'bg-green-500' },
                 yellow: { bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-700 dark:text-yellow-400', border: 'border-yellow-200 dark:border-yellow-900/50', dot: 'bg-yellow-500' },
@@ -83,6 +98,10 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
         return String(rawValue);
     };
 
+    const activeFields = visibleColumns 
+        ? structure.fields.filter((f: any) => visibleColumns.includes(f.name))
+        : structure.fields;
+
     return (
         <div className="space-y-4">
             <div className="bg-white dark:bg-surface-elevated border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
@@ -91,7 +110,7 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
                         <thead className="bg-gray-50 dark:bg-gray-800 text-xs uppercase font-semibold text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
                             <tr>
                                 <th scope="col" className="px-6 py-4">Internal Tag</th>
-                                {structure.fields.map((field: any) => (
+                                {activeFields.map((field: any) => (
                                     <th key={field.id} scope="col" className="px-6 py-4">{field.name}</th>
                                 ))}
                                 <th scope="col" className="px-6 py-4 text-right">Actions</th>
@@ -100,14 +119,14 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
                         <tbody>
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={structure.fields.length + 2} className="px-6 py-8 text-center" aria-live="polite" aria-busy="true">
-                                        <svg className="inline w-6 h-6 animate-spin text-primary-600 motion-reduce:animate-none" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                    <td colSpan={activeFields.length + 2} className="px-6 py-12 text-center" aria-live="polite" aria-busy="true">
+                                        <svg className="inline w-8 h-8 animate-spin text-primary-600 motion-reduce:animate-none" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                                     </td>
                                 </tr>
                             ) : assets.length === 0 ? (
                                 <tr>
-                                    <td colSpan={structure.fields.length + 2} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
-                                        No assets found in this module.
+                                    <td colSpan={activeFields.length + 2} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                                        {searchQuery ? "No assets match your search." : "No assets found in this module."}
                                     </td>
                                 </tr>
                             ) : (
@@ -117,7 +136,7 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
                                             {asset.internal_tag}
                                         </td>
                                         
-                                        {structure.fields.map((field: any) => (
+                                        {activeFields.map((field: any) => (
                                             <td key={field.id} className="px-6 py-4 whitespace-nowrap">
                                                 {renderCellContent(asset, field)}
                                             </td>
@@ -142,10 +161,10 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
             <div className="flex items-center justify-between px-4">
                 <span className="text-sm text-gray-600 dark:text-gray-400">Page {page}</span>
                 <div className="flex gap-2">
-                    <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1 || isLoading} className="px-4 py-2 text-sm font-bold text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 dark:bg-surface-elevated dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-800">
+                    <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1 || isLoading} className="px-4 py-2 text-sm font-bold text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 dark:bg-surface-elevated dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-800 transition-colors">
                         Previous
                     </button>
-                    <button onClick={() => setPage(p => p + 1)} disabled={isLoading} className="px-4 py-2 text-sm font-bold text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 dark:bg-surface-elevated dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-800">
+                    <button onClick={() => setPage(p => p + 1)} disabled={isLoading || assets.length < 10} className="px-4 py-2 text-sm font-bold text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 dark:bg-surface-elevated dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-800 transition-colors">
                         Next
                     </button>
                 </div>
