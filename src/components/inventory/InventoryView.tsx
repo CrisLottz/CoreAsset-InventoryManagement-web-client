@@ -32,6 +32,9 @@ export const InventoryView = ({ categoryId }: InventoryViewProps) => {
     const [searchField, setSearchField] = useState('internal_tag');
     const [ordering, setOrdering] = useState('-created_at');
     const [columnsConfig, setColumnsConfig] = useState<{name: string, is_visible: boolean}[]>([]); 
+    
+    // NUEVO ESTADO: Controla la bandera para activos sin asignar
+    const [showUnassigned, setShowUnassigned] = useState(false);
 
     useEffect(() => {
         if (!categoryId) return;
@@ -40,7 +43,8 @@ export const InventoryView = ({ categoryId }: InventoryViewProps) => {
         setSearchQuery('');
         setSearchField('internal_tag');
         setOrdering('-created_at');
-        setColumnsConfig([]); // Reset en cambio de módulo
+        setColumnsConfig([]); 
+        setShowUnassigned(false); // Reset al cambiar de módulo
 
         apiClient.get(`/assets/categories/${categoryId}/`)
             .then(async (response) => {
@@ -115,26 +119,53 @@ export const InventoryView = ({ categoryId }: InventoryViewProps) => {
             </header>
 
             <div className="flex flex-col md:flex-row gap-4 justify-between bg-white dark:bg-surface-elevated p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-                <div className="flex w-full md:w-auto">
-                    <select 
-                        value={searchField} onChange={(e) => setSearchField(e.target.value)}
-                        className="pl-3 pr-8 py-2 bg-gray-50 dark:bg-surface-base border border-gray-300 dark:border-gray-600 rounded-l-md text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary-500 border-r-0"
-                    >
-                        <option value="internal_tag">Internal Tag</option>
-                        {structure.fields.map((f: any) => {
-                            const backendKey = f.field_type === 'LOCATION' ? 'location' : f.field_type === 'EMPLOYEE' ? 'assigned_to' : f.name;
-                            return <option key={f.id} value={backendKey}>{f.name}</option>;
-                        })}
-                    </select>
-                    <div className="relative w-full md:w-64">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                        </div>
-                        <input
-                            type="text" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                            className="block w-full pl-9 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-r-md leading-5 bg-white dark:bg-surface-elevated text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary-500 sm:text-sm"
-                        />
+                <div className="flex flex-col sm:flex-row w-full md:w-auto gap-2">
+                    <div className="flex">
+                        <select 
+                            value={searchField} 
+                            onChange={(e) => {
+                                setSearchField(e.target.value);
+                                setSearchQuery('');
+                                setShowUnassigned(false);
+                            }}
+                            className="pl-3 pr-8 py-2 bg-gray-50 dark:bg-surface-base border border-gray-300 dark:border-gray-600 rounded-l-md text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary-500 border-r-0"
+                        >
+                            <option value="internal_tag">Internal Tag</option>
+                            {structure.fields.map((f: any) => {
+                                const backendKey = f.field_type === 'LOCATION' ? 'location' : f.field_type === 'EMPLOYEE' ? 'assigned_to' : f.name;
+                                return <option key={f.id} value={backendKey}>{f.name}</option>;
+                            })}
+                        </select>
+                        
+                        {/* Renderizado condicional del input de texto basado en el toggle */}
+                        {(!showUnassigned || searchField !== 'assigned_to') && (
+                            <div className="relative w-full md:w-64">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                </div>
+                                <input
+                                    type="text" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="block w-full pl-9 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-r-md leading-5 bg-white dark:bg-surface-elevated text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary-500 sm:text-sm"
+                                />
+                            </div>
+                        )}
                     </div>
+
+                    {/* RENDERIZADO CONDICIONAL EXCLUSIVO PARA ASSIGNED TO */}
+                    {searchField === 'assigned_to' && (
+                        <label className="flex items-center gap-2 cursor-pointer bg-gray-50 dark:bg-surface-base border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm text-gray-700 dark:text-gray-300 select-none animate-fade-in">
+                            <input 
+                                type="checkbox" 
+                                checked={showUnassigned} 
+                                onChange={(e) => {
+                                    setShowUnassigned(e.target.checked);
+                                    if (e.target.checked) setSearchQuery(''); 
+                                }}
+                                className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 w-4 h-4" 
+                            />
+                            <span className="font-medium">Show Unassigned Only</span>
+                        </label>
+                    )}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
@@ -167,6 +198,7 @@ export const InventoryView = ({ categoryId }: InventoryViewProps) => {
                 categoryId={categoryId!} structure={structure} refreshTrigger={refreshCount} onEditAsset={handleOpenEditModal} 
                 searchQuery={searchQuery} searchField={searchField} ordering={ordering}
                 columnsConfig={columnsConfig} 
+                showUnassigned={showUnassigned} // <-- PASAMOS LA BANDERA
             />
 
             <AssetFormModal 
@@ -174,7 +206,6 @@ export const InventoryView = ({ categoryId }: InventoryViewProps) => {
                 onSuccess={() => { handleCloseModal(); setRefreshCount(prev => prev + 1); }}
             />
 
-            {/* MODAL DE EDITOR DE VISTAS */}
             {isViewEditorOpen && (
                 <ViewEditorModal
                     isOpen={isViewEditorOpen}

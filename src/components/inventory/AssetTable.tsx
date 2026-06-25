@@ -25,19 +25,18 @@ interface AssetTableProps {
     searchField: string;
     ordering: string;
     columnsConfig: ColumnConfig[]; 
+    showUnassigned: boolean; // <-- NUEVO PROP EN CONTRATO
 }
 
-export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAsset, searchQuery, searchField, ordering, columnsConfig }: AssetTableProps) => {
+export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAsset, searchQuery, searchField, ordering, columnsConfig, showUnassigned }: AssetTableProps) => {
     const [assets, setAssets] = useState<Asset[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [page, setPage] = useState(1);
-    
-    // NUEVO ESTADO: Controla el popup de lectura para textos largos
     const [expandedText, setExpandedText] = useState<{title: string, content: string} | null>(null);
 
     useEffect(() => {
         setPage(1);
-    }, [searchQuery, searchField, ordering, categoryId]);
+    }, [searchQuery, searchField, ordering, categoryId, showUnassigned]);
 
     useEffect(() => {
         const fetchInventory = async () => {
@@ -45,8 +44,12 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
             try {
                 const response = await apiClient.get('/assets/inventory/', {
                     params: { 
-                        page: page, category: categoryId,
-                        search: searchQuery || undefined, search_field: searchField, ordering: ordering
+                        page: page, 
+                        category: categoryId,
+                        search: searchQuery || undefined, 
+                        search_field: searchField, 
+                        ordering: ordering,
+                        assigned_to_null: showUnassigned ? 'true' : undefined // <-- INYECCIÓN DE RED
                     }
                 });
                 setAssets(response.data.results || response.data);
@@ -59,7 +62,7 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
         };
         const timeoutId = setTimeout(() => fetchInventory(), 300);
         return () => clearTimeout(timeoutId);
-    }, [categoryId, page, refreshTrigger, searchQuery, searchField, ordering]);
+    }, [categoryId, page, refreshTrigger, searchQuery, searchField, ordering, showUnassigned]);
 
     const renderCellContent = (asset: Asset, fieldName: string) => {
         const fieldMeta = structure.fields.find((f: any) => f.name === fieldName);
@@ -81,7 +84,7 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
                 yellow: { bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-700 dark:text-yellow-400', border: 'border-yellow-200 dark:border-yellow-900/50', dot: 'bg-yellow-500' },
                 red: { bg: 'bg-red-50 dark:bg-red-900/20', text: 'text-red-700 dark:text-red-400', border: 'border-red-200 dark:border-red-900/50', dot: 'bg-red-500' },
                 purple: { bg: 'bg-purple-50 dark:bg-purple-900/20', text: 'text-purple-700 dark:text-purple-400', border: 'border-purple-200 dark:border-purple-900/50', dot: 'bg-purple-500' },
-                gray: { bg: 'bg-gray-50 dark:bg-gray-900/20', text: 'text-gray-700 dark:text-gray-400', border: 'border-gray-200 dark:border-gray-900/50', dot: 'bg-gray-500' }
+                gray: { bg: 'bg-gray-50 dark:bg-gray-900/20', text: 'text-gray-700 dark:text-gray-400', border: 'border-gray-200 dark:border-gray-700/50', dot: 'bg-gray-500' }
             };
             const theme = themeMap[colorName] || themeMap.gray;
 
@@ -98,9 +101,8 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
             return optionMeta?.label || rawValue;
         }
 
-        // CONTROL DE TEXTOS LARGOS Y CORTES DE UI
         const textStr = String(rawValue);
-        const MAX_LENGTH = 35; // Límite de caracteres antes de mostrar el botón de ver más
+        const MAX_LENGTH = 35;
 
         if (textStr.length > MAX_LENGTH || fieldMeta.field_type === 'LONG_TEXT') {
             return (
@@ -114,7 +116,6 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
                     <button 
                         onClick={() => setExpandedText({ title: fieldMeta.name, content: textStr })}
                         className="text-primary-600 hover:text-primary-800 dark:text-primary-400 font-bold px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none"
-                        aria-label={`View full ${fieldMeta.name}`}
                     >
                         ...
                     </button>
@@ -144,14 +145,14 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
                         <tbody>
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={orderedVisibleFields.length + 2} className="px-6 py-12 text-center" aria-live="polite" aria-busy="true">
-                                        <svg className="inline w-8 h-8 animate-spin text-primary-600 motion-reduce:animate-none" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                    <td colSpan={orderedVisibleFields.length + 2} className="px-6 py-12 text-center">
+                                        <svg className="inline w-8 h-8 animate-spin text-primary-600" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                                     </td>
                                 </tr>
                             ) : assets.length === 0 ? (
                                 <tr>
                                     <td colSpan={orderedVisibleFields.length + 2} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
-                                        {searchQuery ? "No assets match your search." : "No assets found in this module."}
+                                        {searchQuery || showUnassigned ? "No assets match your search." : "No assets found in this module."}
                                     </td>
                                 </tr>
                             ) : (
@@ -195,7 +196,6 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
                 </div>
             </div>
 
-            {/* POPUP DE LECTURA PARA TEXTOS LARGOS */}
             {expandedText && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true">
                     <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity" onClick={() => setExpandedText(null)}></div>
@@ -207,7 +207,6 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
                             </button>
                         </header>
                         <div className="p-5 overflow-y-auto max-h-[60vh]">
-                            {/* break-all garantiza que "aaaaa..." no rompa el modal */}
                             <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-all text-sm leading-relaxed">
                                 {expandedText.content}
                             </p>
