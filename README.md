@@ -1,4 +1,4 @@
-<p align="center">
+<p align="center"> 
   <img src="public/favicon.svg" width="80" alt="CoreAsset Logo" />
 </p>
 
