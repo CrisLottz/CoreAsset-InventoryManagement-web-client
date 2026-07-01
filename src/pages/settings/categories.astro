@@ -1,0 +1,28 @@
+---
+// Importa tu layout principal (el que contiene el Sidebar oscuro)
+import Layout from '../../layouts/Layout.astro'; 
+import { CategoryBuilder } from '../../components/settings/CategoryBuilder.tsx';
+---
+
+<Layout title="Category Designer | System Settings">
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary-600 text-white px-4 py-2 z-50 rounded">
+        Skip to main content
+    </a>
+
+    <main id="main-content" class="p-4 sm:p-6 lg:p-8 w-full max-w-7xl mx-auto" aria-labelledby="page-title">
+        <header class="mb-8">
+            <h1 id="page-title" class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white tracking-tight" style="letter-spacing: -0.02em; line-height: 1.1;">
+                Category Designer
+            </h1>
+            <p class="mt-2 text-sm md:text-base text-gray-600 dark:text-gray-400 max-w-3xl">
+                Define the underlying architecture of your inventory modules. Create new asset categories, assign icons, and enforce custom data schemas with strict validation rules.
+            </p>
+        </header>
+
+        <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="lg:col-span-12">
+                <CategoryBuilder client:load />
+            </div>
+        </section>
+    </main>
+</Layout>

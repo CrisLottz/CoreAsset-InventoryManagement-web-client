@@ -1,0 +1,28 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { LoginIsland } from '../components/auth/LoginIsland';
+---
+
+<Layout title="Iniciar Sesión">
+    <section class="flex-grow grid grid-cols-1 md:grid-cols-12 min-h-screen">
+        <div class="hidden md:flex md:col-span-6 lg:col-span-7 bg-primary-800 flex-col justify-center items-start p-12 lg:p-24">
+            <div class="max-w-2xl">
+                <h1 class="text-4xl lg:text-5xl font-bold text-white mb-8">
+                    CoreAsset Inventory & IAM Engine
+                </h1>
+                <p class="text-primary-100 text-lg leading-relaxed">
+                    Sistema centralizado para la gobernanza de identidades y rastreo de activos de hardware.
+                </p>
+            </div>
+        </div>
+
+        <div class="col-span-1 md:col-span-6 lg:col-span-5 flex flex-col justify-center items-center p-8 bg-gray-50 dark:bg-surface-base">
+            <div class="w-full max-w-md mb-12 flex flex-col items-center md:hidden">
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white text-center">CoreAsset</h1>
+            </div>
+
+            {/* Inyectamos una sola isla que ya contiene su propia memoria encapsulada */}
+            <LoginIsland client:load />
+        </div>
+    </section>
+</Layout>

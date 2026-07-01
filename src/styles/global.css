@@ -1,1 +1,52 @@
-@import "tailwindcss";
+@import "tailwindcss";@import "tailwindcss";
+
+/* 1. Inyección del Tema Personalizado a Tailwind v4 */
+@theme {
+  /* Marca Blanca - Colores Dinámicos */
+  --color-primary-50: var(--color-primary-50);
+  --color-primary-100: var(--color-primary-100);
+  --color-primary-500: var(--color-primary-500);
+  --color-primary-600: var(--color-primary-600); /* Base de Botones */
+  --color-primary-700: var(--color-primary-700); /* Hover */
+  --color-primary-800: var(--color-primary-800); /* Active */
+
+  /* Semántica Pura (Estricto según UX Rules) */
+  --color-semantic-error: #dc2626;   /* Tailwind Red 600 */
+  --color-semantic-success: #16a34a; /* Tailwind Green 600 */
+  --color-semantic-warning: #ca8a04; /* Tailwind Yellow 600 */
+  --color-semantic-info: #2563eb;    /* Tailwind Blue 600 */
+
+  /* Superficies para Modo Oscuro (Sin sombras) */
+  --color-surface-base: #111827;     /* Fondo principal oscuro */
+  --color-surface-elevated: #1f2937; /* Reemplaza la sombra de tarjetas */
+}
+
+/* 2. Definición de Variables CSS Nativas (El "Cerebro" del White-Label) */
+@layer base {
+  :root {
+    /* Tema por Defecto (Gris Neutro/Azul). 
+       Para Campos Law Firm, solo cambiaremos estos HEX mediante JS o en este archivo. */
+    --color-primary-50: #eff6ff;
+    --color-primary-100: #dbeafe;
+    --color-primary-500: #3b82f6;
+    --color-primary-600: #2563eb; 
+    --color-primary-700: #1d4ed8;
+    --color-primary-800: #1e40af;
+
+    /* Tipografía Estricta */
+    --tracking-heading: -0.02em; /* Tracking negativo del 2% */
+    --leading-heading: 1.1;      /* 110% Line height */
+  }
+
+  /* Reset y Base A11y */
+  body {
+    @apply bg-gray-50 text-gray-900 dark:bg-surface-base dark:text-gray-100 antialiased;
+  }
+
+  /* Aplicación obligatoria de Tipografía para H1, H2 */
+  h1, h2 {
+    letter-spacing: var(--tracking-heading);
+    line-height: var(--leading-heading);
+    @apply font-bold;
+  }
+}

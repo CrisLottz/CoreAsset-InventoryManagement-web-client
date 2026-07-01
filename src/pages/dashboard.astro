@@ -1,0 +1,21 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro';
+import { DashboardMetrics } from '../components/dashboard/DashboardMetrics';
+---
+
+<DashboardLayout title="Resumen">
+    <div class="max-w-7xl mx-auto space-y-8">
+        
+        <header>
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                Resumen de Activos
+            </h1>
+            <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                Visión general del inventario en tu jurisdicción asignada.
+            </p>
+        </header>
+
+        <DashboardMetrics client:load />
+
+    </div>
+</DashboardLayout>
