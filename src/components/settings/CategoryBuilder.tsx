@@ -120,15 +120,12 @@ export const CategoryBuilder = () => {
         }));
     };
 
-    // --- FUNCIÓN DE REORDENAMIENTO DE CAMPOS CON BOTONES ---
     const moveField = (index: number, direction: 'UP' | 'DOWN') => {
         setCategories(prev => prev.map(c => {
             if (c.id !== selectedId) return c;
             
             const targetIndex = direction === 'UP' ? index - 1 : index + 1;
             
-            // Prohibimos mover cualquier campo a la posición 0 (donde vive la Primary Key estricta)
-            // o intentar mover la Primary Key misma.
             if (index === 0 || targetIndex === 0) return c;
             if (targetIndex >= c.fields.length) return c;
 
@@ -193,7 +190,6 @@ export const CategoryBuilder = () => {
     const executeVerifiedDelete = async () => {
         if (!securityModal.confirmKey) return alert("You must provide authorization credentials.");
 
-        // BORRADO DE MÓDULO (Categoría Completa)
         if (securityModal.type === 'category') {
             try {
                 if (!securityModal.targetId.startsWith('cat-')) {
@@ -207,7 +203,6 @@ export const CategoryBuilder = () => {
                 alert("Cannot delete module. Ensure no active assets are linked to it.");
             }
         } 
-        // BORRADO DE CAMPO
         else if (securityModal.type === 'field') {
             setCategories(prev => prev.map(c => {
                 if (c.id !== selectedId) return c;
@@ -273,7 +268,6 @@ export const CategoryBuilder = () => {
                                 is_system_default: false,
                                 is_hidden: false,
                                 display_order: 100,
-                                // La Primary Key 'Internal Tag' viene estrictamente bloqueada por defecto
                                 fields: [{ id: `new-tag-${Date.now()}`, name: 'Internal Tag', field_type: 'TEXT', is_required: true, is_locked: true }]
                             };
                             setCategories(prev => [...prev, newCat]);
@@ -329,7 +323,6 @@ export const CategoryBuilder = () => {
                                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Enforce metadata constraints and system routing settings.</p>
                             </div>
                             <div className="flex flex-col sm:flex-row gap-3">
-                                {/* BOTÓN ROJO DE BORRADO DE MÓDULO COMPLETO */}
                                 {!activeCategory.is_system_default && (
                                     <button 
                                         onClick={() => triggerDeleteVerification('category', activeCategory.id)}
@@ -426,14 +419,62 @@ export const CategoryBuilder = () => {
                                 </div>
 
                                 <div className="space-y-4">
+                                    {/* INDICADOR VISUAL FANTASMA EXCLUSIVO PARA SEEDED CATEGORIES */}
+                                    {activeCategory.is_system_default && (
+                                        <div className="p-4 border rounded-lg shadow-sm transition-all relative group bg-gray-50 border-gray-200 dark:bg-gray-800/80 dark:border-gray-700">
+                                            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+                                                <div className="md:col-span-4">
+                                                    <div className="flex justify-between items-center mb-1">
+                                                        <label className="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase">Field Key/Label Name</label>
+                                                        <span className="flex items-center gap-1 px-1.5 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800/50 rounded text-[9px] uppercase font-bold tracking-wider select-none">
+                                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" /></svg>
+                                                            System PK
+                                                        </span>
+                                                    </div>
+                                                    <input 
+                                                        type="text" value="Internal Tag" 
+                                                        disabled={true} 
+                                                        className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm disabled:opacity-100 disabled:bg-gray-100 disabled:text-gray-900 dark:disabled:bg-gray-900 dark:disabled:text-white disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-primary-500 transition-colors"
+                                                    />
+                                                </div>
+
+                                                <div className="md:col-span-4">
+                                                    <label className="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Data Type Constraint</label>
+                                                    <select
+                                                        value="TEXT"
+                                                        disabled={true}
+                                                        className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-100 disabled:bg-gray-100 disabled:text-gray-900 dark:disabled:bg-gray-900 dark:disabled:text-white disabled:cursor-not-allowed transition-colors"
+                                                    >
+                                                        <option value="TEXT">Free Text (Max 200 chars)</option>
+                                                    </select>
+                                                </div>
+
+                                                <div className="md:col-span-3 flex items-center gap-4 h-[58px]">
+                                                    <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 select-none cursor-not-allowed opacity-50">
+                                                        <input 
+                                                            type="checkbox" checked={true} 
+                                                            disabled={true}
+                                                            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 w-4 h-4 disabled:cursor-not-allowed"
+                                                        />
+                                                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Required</span>
+                                                    </label>
+                                                </div>
+
+                                                <div className="md:col-span-1 flex justify-end h-[58px] items-center">
+                                                    <svg className="w-4 h-4 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" /></svg>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {activeCategory.fields.map((field, index) => {
-                                        // APLICACIÓN DE GUARDIA ESTRICTA Y VISUAL PARA LA LLAVE PRIMARIA
-                                        const isStrictPK = field.is_locked || field.name.toLowerCase() === 'internal tag';
+                                        // PROTECCIÓN DE LLAVE PRIMARIA EXCLUSIVAMENTE PARA MÓDULOS CUSTOM O CAMPOS BLOQUEADOS DE DB
+                                        const isStrictPK = (!activeCategory.is_system_default && index === 0) || field.is_locked || field.name.toLowerCase() === 'internal tag';
 
                                         return (
                                             <div 
                                                 key={field.id}
-                                                className={`p-4 border rounded-lg shadow-sm transition-all relative group ${isStrictPK ? 'bg-primary-50/40 border-primary-200 dark:bg-primary-900/10 dark:border-primary-800/50' : 'bg-white border-gray-200 dark:bg-surface-base/80 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-800'}`}
+                                                className={`p-4 border rounded-lg shadow-sm transition-all relative group ${isStrictPK ? 'bg-gray-50 border-gray-200 dark:bg-gray-800/80 dark:border-gray-700' : 'bg-white border-gray-200 dark:bg-surface-base/80 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-800'}`}
                                             >
                                                 
                                                 {/* BOTONES DE REORDENAMIENTO (MOVE UP / DOWN) */}
@@ -443,7 +484,7 @@ export const CategoryBuilder = () => {
                                                             type="button" 
                                                             disabled={index <= 1} // No puede subir a la posición de la PK (index 0)
                                                             onClick={() => moveField(index, 'UP')}
-                                                            className="p-1.5 text-gray-500 hover:text-primary-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                                            className="p-1.5 text-gray-500 hover:text-primary-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-primary-400 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                                                             title="Move Field Up"
                                                         >
                                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7" /></svg>
@@ -453,7 +494,7 @@ export const CategoryBuilder = () => {
                                                             type="button" 
                                                             disabled={index === activeCategory.fields.length - 1} 
                                                             onClick={() => moveField(index, 'DOWN')}
-                                                            className="p-1.5 text-gray-500 hover:text-primary-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                                            className="p-1.5 text-gray-500 hover:text-primary-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-primary-400 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                                                             title="Move Field Down"
                                                         >
                                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
@@ -466,10 +507,10 @@ export const CategoryBuilder = () => {
                                                     {/* Nombre de la Propiedad */}
                                                     <div className="md:col-span-4">
                                                         <div className="flex justify-between items-center mb-1">
-                                                            <label className="block text-[11px] font-bold text-gray-500 uppercase">Field Key/Label Name</label>
+                                                            <label className="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase">Field Key/Label Name</label>
                                                             {/* BADGE DE PROTECCIÓN INDUSTRIAL */}
                                                             {isStrictPK && (
-                                                                <span className="flex items-center gap-1 px-1.5 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 rounded text-[9px] uppercase font-bold tracking-wider select-none">
+                                                                <span className="flex items-center gap-1 px-1.5 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800/50 rounded text-[9px] uppercase font-bold tracking-wider select-none">
                                                                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" /></svg>
                                                                     System PK
                                                                 </span>
@@ -479,18 +520,18 @@ export const CategoryBuilder = () => {
                                                             type="text" value={field.name} 
                                                             disabled={isStrictPK} 
                                                             onChange={(e) => updateFieldProperty(field.id, 'name', e.target.value)}
-                                                            className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm disabled:opacity-100 disabled:bg-gray-100 disabled:text-gray-900 dark:disabled:bg-gray-800 dark:disabled:text-white disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-primary-500 transition-colors"
+                                                            className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm disabled:opacity-100 disabled:bg-gray-100 disabled:text-gray-900 dark:disabled:bg-gray-900 dark:disabled:text-white disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-primary-500 transition-colors"
                                                         />
                                                     </div>
 
                                                     {/* Selector de Tipo de Dato con Bloqueo Estricto */}
                                                     <div className="md:col-span-4">
-                                                        <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1">Data Type Constraint</label>
+                                                        <label className="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Data Type Constraint</label>
                                                         <select
                                                             value={field.field_type}
                                                             disabled={isStrictPK || !field.id.startsWith('new-')} // BLOQUEO DE MUTACIÓN
                                                             onChange={(e) => updateFieldProperty(field.id, 'field_type', e.target.value)}
-                                                            className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-100 disabled:bg-gray-100 disabled:text-gray-900 dark:disabled:bg-gray-800 dark:disabled:text-white disabled:cursor-not-allowed transition-colors"
+                                                            className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-100 disabled:bg-gray-100 disabled:text-gray-900 dark:disabled:bg-gray-900 dark:disabled:text-white disabled:cursor-not-allowed transition-colors"
                                                         >
                                                             <option value="TEXT">Free Text (Max 200 chars)</option>
                                                             <option value="NUMBER">Number Only</option>
@@ -511,7 +552,7 @@ export const CategoryBuilder = () => {
                                                                 onChange={(e) => updateFieldProperty(field.id, 'is_required', e.target.checked)}
                                                                 className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 w-4 h-4 disabled:cursor-not-allowed"
                                                             />
-                                                            <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Required</span>
+                                                            <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Required</span>
                                                         </label>
                                                     </div>
 
