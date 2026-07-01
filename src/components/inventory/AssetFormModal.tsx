@@ -20,12 +20,15 @@ export const AssetFormModal = ({ isOpen, onClose, onSuccess, categoryId, structu
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Identificamos el nombre personalizado de la llave primaria si existe, o caemos al valor por defecto
+    // Estado para la confirmación en línea del borrado individual
+    const [deleteState, setDeleteState] = useState<'IDLE' | 'CONFIRMING' | 'DELETING'>('IDLE');
+
     const pkField = structure?.fields?.find((f: any) => f.is_locked && (f.name.toLowerCase() === 'internal tag' || f.id.includes('tag')));
     const pkLabel = pkField ? pkField.name : 'Internal Tag / Unique Identifier';
 
     useEffect(() => {
         if (isOpen && structure) {
+            setDeleteState('IDLE'); // Resetear estado de borrado al abrir
             
             Promise.all([
                 apiClient.get('/assets/locations/').catch(() => ({ data: [] })),
@@ -38,7 +41,6 @@ export const AssetFormModal = ({ isOpen, onClose, onSuccess, categoryId, structu
             const initialValues: Record<string, string> = {};
             
             structure.fields.forEach((field: any) => {
-                // Prevenimos mapear la PK como un campo dinámico visual
                 if (field.name === pkLabel || field.name.toLowerCase() === 'internal tag') return;
 
                 if (assetToEdit) {
@@ -80,7 +82,6 @@ export const AssetFormModal = ({ isOpen, onClose, onSuccess, categoryId, structu
         };
 
         structure.fields.forEach((field: any) => {
-            // INYECCIÓN VITAL: Pasamos la PK al dynamic_data de forma invisible para satisfacer la validación estricta de Django
             if (field.name === pkLabel || field.name.toLowerCase() === 'internal tag') {
                 payload.dynamic_data[field.name] = internalTag;
                 return;
@@ -128,6 +129,24 @@ export const AssetFormModal = ({ isOpen, onClose, onSuccess, categoryId, structu
         }
     };
 
+    // --- LÓGICA DE BORRADO INDIVIDUAL CON RBAC ---
+    const handleDeleteAsset = async () => {
+        setDeleteState('DELETING');
+        setError(null);
+        try {
+            await apiClient.delete(`/assets/inventory/${assetToEdit.id}/`);
+            onSuccess();
+            onClose();
+        } catch (err: any) {
+            if (err.response?.status === 403) {
+                setError("Access Denied: Your assigned role lacks permission to delete assets.");
+            } else {
+                setError("An error occurred while deleting the asset.");
+            }
+            setDeleteState('IDLE');
+        }
+    };
+
     const renderFieldInput = (field: any) => {
         const value = dynamicValues[field.name] || '';
         const handleChange = (val: string) => setDynamicValues(prev => ({ ...prev, [field.name]: val }));
@@ -138,7 +157,7 @@ export const AssetFormModal = ({ isOpen, onClose, onSuccess, categoryId, structu
             case 'DROPDOWN':
             case 'COLOR_STATUS':
                 return (
-                    <select required={field.is_required} value={value} onChange={(e) => handleChange(e.target.value)} className={baseClasses}>
+                    <select required={field.is_required} value={value} onChange={(e) => handleChange(e.target.value)} className={baseClasses} disabled={isLoading || deleteState !== 'IDLE'}>
                         <option value="" disabled>Select...</option>
                         {field.options_metadata?.map((opt: any) => (
                             <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -147,7 +166,7 @@ export const AssetFormModal = ({ isOpen, onClose, onSuccess, categoryId, structu
                 );
             case 'LOCATION':
                 return (
-                    <select required={field.is_required} value={value} onChange={(e) => handleChange(e.target.value)} className={baseClasses}>
+                    <select required={field.is_required} value={value} onChange={(e) => handleChange(e.target.value)} className={baseClasses} disabled={isLoading || deleteState !== 'IDLE'}>
                         <option value="" disabled>Select a location...</option>
                         {locations.map(loc => (
                             <option key={loc.id} value={loc.id}>{loc.name}</option>
@@ -156,7 +175,7 @@ export const AssetFormModal = ({ isOpen, onClose, onSuccess, categoryId, structu
                 );
             case 'EMPLOYEE':
                 return (
-                    <select required={field.is_required} value={value} onChange={(e) => handleChange(e.target.value)} className={baseClasses}>
+                    <select required={field.is_required} value={value} onChange={(e) => handleChange(e.target.value)} className={baseClasses} disabled={isLoading || deleteState !== 'IDLE'}>
                         <option value="unassigned">Unassigned</option>
                         {employees.map(emp => (
                             <option key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name}</option>
@@ -165,14 +184,14 @@ export const AssetFormModal = ({ isOpen, onClose, onSuccess, categoryId, structu
                 );
             case 'LONG_TEXT':
                 return (
-                    <textarea required={field.is_required} value={value} rows={3} onChange={(e) => handleChange(e.target.value)} className={baseClasses} />
+                    <textarea required={field.is_required} value={value} rows={3} onChange={(e) => handleChange(e.target.value)} className={baseClasses} disabled={isLoading || deleteState !== 'IDLE'} />
                 );
             default:
                 return (
                     <input 
                         type={field.field_type === 'NUMBER' ? 'number' : 'text'}
                         required={field.is_required} value={value}
-                        onChange={(e) => handleChange(e.target.value)} className={baseClasses}
+                        onChange={(e) => handleChange(e.target.value)} className={baseClasses} disabled={isLoading || deleteState !== 'IDLE'}
                     />
                 );
         }
@@ -195,7 +214,7 @@ export const AssetFormModal = ({ isOpen, onClose, onSuccess, categoryId, structu
 
                 <div className="overflow-y-auto p-6">
                     {error && (
-                        <div className="mb-6 p-4 bg-red-50 text-semantic-error border border-red-200 dark:bg-red-900/20 dark:border-red-900/50 rounded flex items-start gap-3">
+                        <div className="mb-6 p-4 bg-red-50 text-semantic-error border border-red-200 dark:bg-red-900/20 dark:border-red-900/50 rounded flex items-start gap-3" aria-live="assertive">
                             <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                             <span className="text-sm font-medium">{error}</span>
                         </div>
@@ -211,7 +230,8 @@ export const AssetFormModal = ({ isOpen, onClose, onSuccess, categoryId, structu
                                 <input 
                                     type="text" required value={internalTag}
                                     onChange={e => setInternalTag(e.target.value)}
-                                    className="w-full px-4 py-2 bg-white dark:bg-surface-base border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono uppercase"
+                                    disabled={isLoading || deleteState !== 'IDLE'}
+                                    className="w-full px-4 py-2 bg-white dark:bg-surface-base border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono uppercase disabled:opacity-50"
                                     placeholder="E.g. LAP-2026-001"
                                 />
                             </div>
@@ -229,13 +249,56 @@ export const AssetFormModal = ({ isOpen, onClose, onSuccess, categoryId, structu
                     </form>
                 </div>
 
-                <footer className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-surface-base flex justify-end gap-4">
-                    <button type="button" onClick={onClose} className="px-6 py-3 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors">
-                        Cancel
-                    </button>
-                    <button type="submit" form="dynamic-asset-form" disabled={isLoading} className="px-6 py-3 text-sm font-bold text-white bg-primary-600 hover:bg-primary-700 active:bg-primary-800 disabled:opacity-50 rounded flex items-center justify-center gap-2 transition-colors">
-                        {isLoading ? "Saving..." : (assetToEdit ? `Update ${structure.name}` : `Save ${structure.name}`)}
-                    </button>
+                <footer className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-surface-base flex justify-between items-center gap-4">
+                    
+                    {/* ZONA IZQUIERDA: BOTÓN DE BORRADO (Solo visible al Editar) */}
+                    <div>
+                        {assetToEdit && (
+                            deleteState === 'IDLE' ? (
+                                <button 
+                                    type="button" 
+                                    onClick={() => setDeleteState('CONFIRMING')} 
+                                    className="px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 rounded transition-colors focus:outline-none"
+                                >
+                                    Delete Asset
+                                </button>
+                            ) : (
+                                <div className="flex items-center gap-3 animate-fade-in bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded border border-red-100 dark:border-red-900/50">
+                                    <span className="text-xs font-bold text-red-700 dark:text-red-400 uppercase tracking-wider">Are you sure?</span>
+                                    <button 
+                                        type="button" 
+                                        onClick={handleDeleteAsset} 
+                                        disabled={deleteState === 'DELETING'}
+                                        className="px-3 py-1.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded shadow-sm transition-colors focus:outline-none disabled:opacity-50"
+                                    >
+                                        {deleteState === 'DELETING' ? 'Deleting...' : 'Yes, Delete'}
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setDeleteState('IDLE')} 
+                                        disabled={deleteState === 'DELETING'}
+                                        className="px-3 py-1.5 text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors focus:outline-none disabled:opacity-50"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            )
+                        )}
+                    </div>
+
+                    {/* ZONA DERECHA: CANCELAR Y GUARDAR */}
+                    <div className="flex items-center gap-3">
+                        <button type="button" onClick={onClose} disabled={isLoading || deleteState === 'DELETING'} className="px-6 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors focus:outline-none disabled:opacity-50">
+                            Cancel
+                        </button>
+                        <button 
+                            type="submit" form="dynamic-asset-form" 
+                            disabled={isLoading || deleteState !== 'IDLE'} 
+                            className="px-6 py-2.5 text-sm font-bold text-white bg-primary-600 hover:bg-primary-700 active:bg-primary-800 disabled:opacity-50 rounded flex items-center justify-center gap-2 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-surface-base"
+                        >
+                            {isLoading ? "Saving..." : (assetToEdit ? `Update ${structure.name}` : `Save ${structure.name}`)}
+                        </button>
+                    </div>
                 </footer>
             </div>
         </div>
