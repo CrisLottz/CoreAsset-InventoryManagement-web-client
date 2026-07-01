@@ -25,7 +25,7 @@ interface AssetTableProps {
     searchField: string;
     ordering: string;
     columnsConfig: ColumnConfig[]; 
-    showUnassigned: boolean; // <-- NUEVO PROP EN CONTRATO
+    showUnassigned: boolean;
 }
 
 export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAsset, searchQuery, searchField, ordering, columnsConfig, showUnassigned }: AssetTableProps) => {
@@ -49,7 +49,7 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
                         search: searchQuery || undefined, 
                         search_field: searchField, 
                         ordering: ordering,
-                        assigned_to_null: showUnassigned ? 'true' : undefined // <-- INYECCIÓN DE RED
+                        assigned_to_null: showUnassigned ? 'true' : undefined
                     }
                 });
                 setAssets(response.data.results || response.data);
@@ -126,7 +126,15 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
         return textStr;
     };
 
-    const orderedVisibleFields = columnsConfig.filter(c => c.is_visible).map(c => c.name);
+    // Identificamos el nombre personalizado de la llave primaria si existe, o caemos al valor por defecto
+    const pkField = structure.fields.find((f: any) => f.is_locked && (f.name.toLowerCase() === 'internal tag' || f.id.includes('tag')));
+    const pkLabel = pkField ? pkField.name : 'INTERNAL TAG';
+
+    // Excluimos la llave primaria de los campos dinámicos que se iterarán para evitar duplicación
+    const orderedVisibleFields = columnsConfig
+        .filter(c => c.is_visible)
+        .map(c => c.name)
+        .filter(name => name !== pkLabel && name.toLowerCase() !== 'internal tag');
 
     return (
         <div className="space-y-4">
@@ -135,7 +143,7 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
                     <table className="w-full text-sm text-left text-gray-700 dark:text-gray-300">
                         <thead className="bg-gray-50 dark:bg-gray-800 text-xs uppercase font-semibold text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
                             <tr>
-                                <th scope="col" className="px-6 py-4">Internal Tag</th>
+                                <th scope="col" className="px-6 py-4">{pkLabel}</th>
                                 {orderedVisibleFields.map((fieldName) => (
                                     <th key={fieldName} scope="col" className="px-6 py-4">{fieldName}</th>
                                 ))}

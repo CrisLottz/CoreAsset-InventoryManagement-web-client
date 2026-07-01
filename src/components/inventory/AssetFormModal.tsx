@@ -20,7 +20,10 @@ export const AssetFormModal = ({ isOpen, onClose, onSuccess, categoryId, structu
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // MODO EDICIÓN: Prepopulado inteligente con paralelización de red
+    // Identificamos el nombre personalizado de la llave primaria si existe, o caemos al valor por defecto
+    const pkField = structure?.fields?.find((f: any) => f.is_locked && (f.name.toLowerCase() === 'internal tag' || f.id.includes('tag')));
+    const pkLabel = pkField ? pkField.name : 'Internal Tag / Unique Identifier';
+
     useEffect(() => {
         if (isOpen && structure) {
             
@@ -29,15 +32,15 @@ export const AssetFormModal = ({ isOpen, onClose, onSuccess, categoryId, structu
                 apiClient.get('/employees/').catch(() => ({ data: [] })) 
             ]).then(([locRes, empRes]) => {
                 setLocations(locRes.data.results || locRes.data || []);
-                
-                // Algunos serializers anidan los datos de diferentes maneras.
-                // Aquí capturamos la lista sin importar la estructura de paginación.
                 setEmployees(empRes.data.results || empRes.data || []);
             });
 
             const initialValues: Record<string, string> = {};
             
             structure.fields.forEach((field: any) => {
+                // Prevenimos mapear la PK como un campo dinámico visual
+                if (field.name === pkLabel || field.name.toLowerCase() === 'internal tag') return;
+
                 if (assetToEdit) {
                     if (field.field_type === 'LOCATION') {
                         initialValues[field.name] = assetToEdit.location || '';
@@ -61,7 +64,7 @@ export const AssetFormModal = ({ isOpen, onClose, onSuccess, categoryId, structu
             setInternalTag(assetToEdit ? assetToEdit.internal_tag : '');
             setError(null);
         }
-    }, [isOpen, structure, assetToEdit]);
+    }, [isOpen, structure, assetToEdit, pkLabel]);
 
     if (!isOpen || !structure) return null;
 
@@ -77,6 +80,12 @@ export const AssetFormModal = ({ isOpen, onClose, onSuccess, categoryId, structu
         };
 
         structure.fields.forEach((field: any) => {
+            // INYECCIÓN VITAL: Pasamos la PK al dynamic_data de forma invisible para satisfacer la validación estricta de Django
+            if (field.name === pkLabel || field.name.toLowerCase() === 'internal tag') {
+                payload.dynamic_data[field.name] = internalTag;
+                return;
+            }
+
             const val = dynamicValues[field.name];
             
             if (field.field_type === 'LOCATION') {
@@ -149,7 +158,6 @@ export const AssetFormModal = ({ isOpen, onClose, onSuccess, categoryId, structu
                 return (
                     <select required={field.is_required} value={value} onChange={(e) => handleChange(e.target.value)} className={baseClasses}>
                         <option value="unassigned">Unassigned</option>
-                        {/* Se renderiza dinámicamente si el array tiene datos */}
                         {employees.map(emp => (
                             <option key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name}</option>
                         ))}
@@ -198,7 +206,7 @@ export const AssetFormModal = ({ isOpen, onClose, onSuccess, categoryId, structu
                             
                             <div className="space-y-2 sm:col-span-2">
                                 <label className="block text-sm font-bold text-gray-700 dark:text-gray-300">
-                                    Internal Tag / Unique Identifier <span className="text-semantic-error">*</span>
+                                    {pkLabel} <span className="text-semantic-error">*</span>
                                 </label>
                                 <input 
                                     type="text" required value={internalTag}
@@ -208,7 +216,7 @@ export const AssetFormModal = ({ isOpen, onClose, onSuccess, categoryId, structu
                                 />
                             </div>
 
-                            {structure.fields.map((field: any) => (
+                            {structure.fields.filter((f: any) => f.name !== pkLabel && f.name.toLowerCase() !== 'internal tag').map((field: any) => (
                                 <div key={field.id} className={`space-y-2 ${field.field_type === 'LONG_TEXT' ? 'sm:col-span-2' : ''}`}>
                                     <label className="block text-sm font-bold text-gray-700 dark:text-gray-300">
                                         {field.name} {field.is_required ? <span className="text-semantic-error">*</span> : <span className="text-gray-400 font-normal text-xs">(Optional)</span>}
