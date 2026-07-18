@@ -218,7 +218,7 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
                         <thead className="bg-gray-50 dark:bg-gray-800 text-xs uppercase font-semibold text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
                             <tr>
                                 {/* CHECKBOX SELECT ALL */}
-                                <th scope="col" className="px-4 py-4 w-12 text-center">
+                                <th scope="col" className="px-4 py-4 w-12 text-center bg-gray-100 dark:bg-gray-700/50">
                                     <input 
                                         type="checkbox" 
                                         className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
@@ -226,11 +226,11 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
                                         onChange={handleSelectAll}
                                     />
                                 </th>
-                                <th scope="col" className="px-6 py-4">{pkLabel}</th>
+                                <th scope="col" className="px-6 py-4 bg-gray-100 dark:bg-gray-700/50">{pkLabel}</th>
+                                <th scope="col" className="px-6 py-4 text-left w-24 bg-gray-100 dark:bg-gray-700/50 border-r-2 border-gray-200 dark:border-gray-700">Actions</th>
                                 {orderedVisibleFields.map((fieldName) => (
                                     <th key={fieldName} scope="col" className="px-6 py-4">{fieldName}</th>
                                 ))}
-                                <th scope="col" className="px-6 py-4 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -250,7 +250,7 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
                                 assets.map((asset) => (
                                     <tr key={asset.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors duration-200">
                                         {/* CHECKBOX INDIVIDUAL */}
-                                        <td className="px-4 py-4 w-12 text-center">
+                                        <td className="px-4 py-4 w-12 text-center bg-gray-100/50 dark:bg-gray-700/30">
                                             <input 
                                                 type="checkbox" 
                                                 className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
@@ -258,17 +258,10 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
                                                 onChange={() => toggleSelection(asset.id)}
                                             />
                                         </td>
-                                        <td className="px-6 py-4 font-bold text-gray-900 dark:text-white whitespace-nowrap">
+                                        <td className="px-6 py-4 font-bold text-gray-900 dark:text-white whitespace-nowrap bg-gray-100/50 dark:bg-gray-700/30">
                                             {asset.internal_tag}
                                         </td>
-                                        
-                                        {orderedVisibleFields.map((fieldName) => (
-                                            <td key={fieldName} className="px-6 py-4 whitespace-nowrap">
-                                                {renderCellContent(asset, fieldName)}
-                                            </td>
-                                        ))}
-                                        
-                                        <td className="px-6 py-4 text-right">
+                                        <td className="px-6 py-4 text-left bg-gray-100/50 dark:bg-gray-700/30 border-r-2 border-gray-200 dark:border-gray-700">
                                             <button 
                                                 onClick={() => onEditAsset(asset)}
                                                 className="text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 font-medium text-sm focus:outline-none focus:underline"
@@ -276,6 +269,12 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
                                                 Manage
                                             </button>
                                         </td>
+                                        
+                                        {orderedVisibleFields.map((fieldName) => (
+                                            <td key={fieldName} className="px-6 py-4 whitespace-nowrap">
+                                                {renderCellContent(asset, fieldName)}
+                                            </td>
+                                        ))}
                                     </tr>
                                 ))
                             )}
