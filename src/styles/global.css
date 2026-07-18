@@ -1,4 +1,5 @@
-@import "tailwindcss";@import "tailwindcss";
+@import "tailwindcss";
+@custom-variant dark (&:is(.dark *));
 
 /* 1. Inyección del Tema Personalizado a Tailwind v4 */
 @theme {
