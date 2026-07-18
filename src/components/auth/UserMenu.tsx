@@ -23,7 +23,7 @@ export const UserMenu = () => {
                         {user.first_name ? `${user.first_name} ${user.last_name}` : user.username}
                     </span>
                     <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                        {user.role || 'Superusuario'}
+                        {user.role || (user.is_staff ? 'Superusuario' : 'Usuario')}
                     </span>
                 </div>
             </div>
