@@ -190,6 +190,17 @@ export const CategoryBuilder = () => {
     const executeVerifiedDelete = async () => {
         if (!securityModal.confirmKey) return alert("You must provide authorization credentials.");
 
+        // 1. Validar la contraseña contra el backend
+        try {
+            await apiClient.post('/users/verify-password/', { 
+                password: securityModal.confirmKey 
+            });
+        } catch (err: any) {
+            alert(err.response?.data?.detail || "Contraseña incorrecta. Operación denegada.");
+            return;
+        }
+
+        // 2. Si la validación es exitosa, procedemos con la destrucción
         if (securityModal.type === 'category') {
             try {
                 if (!securityModal.targetId.startsWith('cat-')) {
