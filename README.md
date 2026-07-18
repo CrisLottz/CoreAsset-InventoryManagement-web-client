@@ -302,6 +302,7 @@ CoreAsset-InventoryManagement-web-client/
 │   │   └── dashboard/               # Protected dashboard routes
 │   │       ├── index.astro          # Dashboard overview
 │   │       ├── assets/              # Asset CRUD pages
+│   │       ├── employees/           # Employee management & CSV imports
 │   │       └── users/               # User management pages
 │   └── styles/
 │       └── global.css               # Tailwind CSS v4 entry point
@@ -643,6 +644,7 @@ CoreAsset-InventoryManagement-web-client/
 │   │   └── dashboard/               # Rutas protegidas del dashboard
 │   │       ├── index.astro          # Vista general del dashboard
 │   │       ├── assets/              # Páginas CRUD de activos
+│   │       ├── employees/           # Gestión de empleados e importación CSV
 │   │       └── users/               # Páginas de gestión de usuarios
 │   └── styles/
 │       └── global.css               # Punto de entrada de Tailwind CSS v4
