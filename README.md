@@ -200,6 +200,15 @@ Accessibility is **not optional** — it is a structural security and compliance
 
 > **Why is A11y a security metric?** Systems that are inaccessible exclude users from safety-critical operations (e.g., an administrator who relies on a screen reader cannot revoke a compromised asset). Inaccessibility in a RBAC system is a **privilege escalation vector by omission**.
 
+### SSR Route Protection (Astro Middleware)
+
+The application implements Server-Side Rendering (SSR) route protection via Astro Middleware (`src/middleware.ts`). Before any protected route is sent to the browser, the middleware checks for the presence of the `sessionid` cookie.
+
+- **Unauthenticated users** hitting a protected route (like `/dashboard`) are instantly intercepted at the server level (Status `302`) and redirected to `/login`. They never download the JS bundle or HTML layout of the dashboard.
+- **Authenticated users** hitting public routes (like `/login`) are automatically redirected to their dashboard.
+
+This guarantees that the client application never leaks protected layouts or attempts unauthorized API calls during initial load.
+
 ---
 
 ## UI/UX Design System
@@ -281,6 +290,7 @@ CoreAsset-InventoryManagement-web-client/
 │   ├── favicon.ico
 │   └── favicon.svg
 ├── src/
+│   ├── middleware.ts                # Astro SSR route protection (session interception)
 │   ├── components/                  # Reusable UI components
 │   │   ├── react/                   # Interactive React islands (hydrated)
 │   │   │   ├── auth/                # AuthProvider, LoginForm, ProtectedRoute
@@ -542,6 +552,15 @@ La accesibilidad **no es opcional** — es una obligación estructural de seguri
 
 > **¿Por qué A11y es una métrica de seguridad?** Los sistemas inaccesibles excluyen a usuarios de operaciones críticas de seguridad (ej., un administrador que depende de un lector de pantalla no puede revocar un activo comprometido). La inaccesibilidad en un sistema RBAC es un **vector de escalación de privilegios por omisión**.
 
+### Protección de Rutas SSR (Middleware de Astro)
+
+La aplicación implementa protección de rutas mediante Server-Side Rendering (SSR) usando el Middleware de Astro (`src/middleware.ts`). Antes de que cualquier ruta protegida se envíe al navegador, el middleware verifica la presencia de la cookie `sessionid`.
+
+- **Usuarios no autenticados** que intentan acceder a una ruta protegida (como `/dashboard`) son interceptados instantáneamente a nivel de servidor (Status `302`) y redirigidos a `/login`. Nunca descargan el bundle de JS ni el layout HTML del dashboard.
+- **Usuarios autenticados** que intentan acceder a rutas públicas (como `/login`) son automáticamente redirigidos a su dashboard.
+
+Esto garantiza que la aplicación cliente nunca filtre layouts protegidos ni intente realizar llamadas API no autorizadas durante la carga inicial.
+
 ---
 
 ## Sistema de Diseño UI/UX
@@ -623,6 +642,7 @@ CoreAsset-InventoryManagement-web-client/
 │   ├── favicon.ico
 │   └── favicon.svg
 ├── src/
+│   ├── middleware.ts                # Protección de rutas SSR de Astro (intercepción de sesión)
 │   ├── components/                  # Componentes de UI reutilizables
 │   │   ├── react/                   # Islas interactivas de React (hidratadas)
 │   │   │   ├── auth/                # AuthProvider, LoginForm, ProtectedRoute
