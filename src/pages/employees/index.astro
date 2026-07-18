@@ -1,0 +1,29 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import EmployeeTableIsland from '../../components/employees/EmployeeTableIsland';
+---
+
+<DashboardLayout title="Employee Directory">
+    <div class="h-full flex flex-col">
+        <!-- Header -->
+        <header class="flex-none px-6 py-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-elevated">
+            <div class="flex items-center justify-between max-w-7xl mx-auto">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white tracking-tight" style="line-height: 1.1;">
+                        Employee Directory
+                    </h1>
+                    <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                        Manage all physical persons in the organization. Note: An employee must exist here before being granted platform access in Identity Governance.
+                    </p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content (Island) -->
+        <main class="flex-1 overflow-y-auto bg-gray-50 dark:bg-surface-base p-6">
+            <div class="max-w-7xl mx-auto">
+                <EmployeeTableIsland client:load />
+            </div>
+        </main>
+    </div>
+</DashboardLayout>
