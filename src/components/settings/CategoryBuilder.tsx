@@ -81,6 +81,22 @@ export const CategoryBuilder = () => {
         confirmKey: ''
     });
 
+    // Toast state
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'warning' | 'error' | 'info' } | null>(null);
+    const [isExiting, setIsExiting] = useState(false);
+
+    const showToast = (message: string, type: 'success' | 'warning' | 'error' | 'info') => {
+        setToast({ message, type });
+        setIsExiting(false);
+        setTimeout(() => {
+            setIsExiting(true);
+            setTimeout(() => {
+                setToast(null);
+                setIsExiting(false);
+            }, 300); // Wait for transition duration before unmounting
+        }, 3000); // Time to display the toast
+    };
+
     useEffect(() => {
         apiClient.get('/assets/categories/')
             .then(res => {
@@ -188,7 +204,10 @@ export const CategoryBuilder = () => {
     };
 
     const executeVerifiedDelete = async () => {
-        if (!securityModal.confirmKey) return alert("You must provide authorization credentials.");
+        if (!securityModal.confirmKey) {
+            showToast("You must provide authorization credentials.", "error");
+            return;
+        }
 
         // 1. Validar la contraseña contra el backend
         try {
@@ -196,7 +215,7 @@ export const CategoryBuilder = () => {
                 password: securityModal.confirmKey 
             });
         } catch (err: any) {
-            alert(err.response?.data?.detail || "Contraseña incorrecta. Operación denegada.");
+            showToast(err.response?.data?.detail || "Contraseña incorrecta. Operación denegada.", "error");
             return;
         }
 
@@ -209,9 +228,11 @@ export const CategoryBuilder = () => {
                 const remaining = categories.filter(c => c.id !== securityModal.targetId);
                 setCategories(remaining);
                 setSelectedId(remaining[0]?.id || null);
+                showToast("Module deleted successfully.", "error"); // Red toast as requested
             } catch (err) {
                 console.error("Failed to delete category:", err);
-                alert("Cannot delete module. Ensure no active assets are linked to it.");
+                showToast("Cannot delete module. Ensure no active assets are linked to it.", "error");
+                return; // Stop execution on error
             }
         } 
         else if (securityModal.type === 'field') {
@@ -219,6 +240,7 @@ export const CategoryBuilder = () => {
                 if (c.id !== selectedId) return c;
                 return { ...c, fields: c.fields.filter(f => f.id !== securityModal.targetId) };
             }));
+            showToast("Field deleted successfully.", "error"); // Red toast for deletion
         }
         
         setSecurityModal({ isOpen: false, type: 'field', targetId: '', confirmKey: '' });
@@ -247,10 +269,10 @@ export const CategoryBuilder = () => {
             } else {
                 await apiClient.put(`/assets/categories/${activeCategory.id}/`, payload);
             }
-            alert(`Schema persisted to database successfully for ${activeCategory.name}.`);
+            showToast(`Schema persisted to database successfully for ${activeCategory.name}.`, "success");
         } catch (err: any) {
             console.error("Mutation failed:", err.response?.data || err);
-            alert("Error: Schema validation failed. Check browser console for details.");
+            showToast("Error: Schema validation failed. Check browser console for details.", "error");
         }
     };
 
@@ -264,8 +286,24 @@ export const CategoryBuilder = () => {
     }
 
     return (
-        <article className="bg-white dark:bg-surface-elevated rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden min-h-[750px] flex flex-col md:flex-row">
+        <article className="bg-white dark:bg-surface-elevated rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden min-h-[750px] flex flex-col md:flex-row relative">
             
+            {/* Toast Notification */}
+            {toast && (
+                <div className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-[100] px-6 py-3 rounded shadow-lg text-white font-medium flex items-center gap-2 transition-opacity duration-300 ${isExiting ? 'opacity-0' : 'opacity-100'} ${
+                    toast.type === 'success' ? 'bg-semantic-success' :
+                    toast.type === 'warning' ? 'bg-semantic-warning text-gray-900' :
+                    toast.type === 'error' ? 'bg-semantic-error' :
+                    'bg-primary-600'
+                }`}>
+                    {toast.type === 'success' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>}
+                    {toast.type === 'warning' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>}
+                    {toast.type === 'error' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>}
+                    {toast.type === 'info' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+                    {toast.message}
+                </div>
+            )}
+
             {/* COLUMNA MAESTRA (MASTER): LISTADO DE CATEGORÍAS */}
             <aside className="w-full md:w-80 border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-surface-base/50 flex flex-col">
                 <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-surface-base">
