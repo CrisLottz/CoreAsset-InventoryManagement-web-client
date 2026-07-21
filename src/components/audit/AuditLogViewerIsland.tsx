@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '../../services/apiClient';
 import { AuditFilterBarIsland } from './AuditFilterBarIsland';
+import { useReadingPaneMode } from '../../hooks/useReadingPaneMode';
+import { useDateFormat } from '../../hooks/useDateFormat';
 
 interface ActorDetails {
     id: string;
@@ -8,6 +10,7 @@ interface ActorDetails {
     email: string;
     first_name: string;
     last_name: string;
+    avatar?: string | null;
 }
 
 interface AuditLog {
@@ -65,30 +68,47 @@ export const AuditLogViewerIsland = () => {
 
     const getActionBadge = (action: string) => {
         const method = action.toUpperCase();
-        if (method === 'POST') return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">Created</span>;
-        if (method === 'PUT' || method === 'PATCH') return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">Updated</span>;
-        if (method === 'DELETE') return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">Deleted</span>;
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300">{method}</span>;
+        const baseClass = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium";
+        if (method === 'POST') return <span className={getThemedClass(baseClass, "bg-green-100 text-green-800", "dark:bg-green-900/30 dark:text-green-400")}>Created</span>;
+        if (method === 'PUT' || method === 'PATCH') return <span className={getThemedClass(baseClass, "bg-blue-100 text-blue-800", "dark:bg-blue-900/30 dark:text-blue-400")}>Updated</span>;
+        if (method === 'DELETE') return <span className={getThemedClass(baseClass, "bg-red-100 text-red-800", "dark:bg-red-900/30 dark:text-red-400")}>Deleted</span>;
+        return <span className={getThemedClass(baseClass, "bg-gray-100 text-gray-800", "dark:bg-gray-800 dark:text-gray-300")}>{method}</span>;
     };
+
+    const { mode, getThemedClass } = useReadingPaneMode();
+    const { formatDateTime } = useDateFormat();
+    
+    // Themed classes for reading pane
+    const containerClasses = getThemedClass('shadow-sm rounded-lg border flex-1 overflow-hidden flex flex-col', 'bg-white border-gray-200', 'dark:bg-surface-elevated dark:border-gray-700 dark:text-gray-100');
+    const theadClasses = getThemedClass('', 'bg-gray-50', 'dark:bg-surface-base');
+    const tbodyClasses = getThemedClass('divide-y', 'bg-white divide-gray-200', 'dark:bg-surface-elevated dark:divide-gray-700');
+    const trClasses = getThemedClass('transition-colors', 'hover:bg-gray-50', 'dark:hover:bg-gray-800/50');
+    const thClasses = getThemedClass('px-4 py-3 text-left text-xs font-medium uppercase tracking-wider', 'text-gray-500', 'dark:text-gray-400');
+    const textPrimaryClasses = getThemedClass('text-sm font-medium', 'text-gray-900', 'dark:text-white');
+    const textSecondaryClasses = getThemedClass('text-xs font-mono', 'text-gray-500', 'dark:text-gray-400');
+    const textBodyClasses = getThemedClass('text-sm', 'text-gray-900', 'dark:text-white');
+    const tdClasses = getThemedClass('px-4 py-4 whitespace-nowrap text-sm', 'text-gray-500', 'dark:text-gray-400');
+    const tdIpClasses = getThemedClass('px-4 py-4 whitespace-nowrap text-sm font-mono', 'text-gray-500', 'dark:text-gray-400');
+    const btnClasses = getThemedClass('inline-flex items-center px-4 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500', 'text-primary-700 bg-primary-50 hover:bg-primary-100', 'dark:text-primary-400 dark:bg-primary-900/20 dark:hover:bg-primary-900/40');
 
     return (
         <div className="flex flex-col h-full space-y-4">
             <AuditFilterBarIsland onFilterChange={handleFilterChange} totalResults={totalResults} />
 
-            <div className="bg-white dark:bg-surface-elevated shadow-sm rounded-lg border border-gray-200 dark:border-gray-700 flex-1 overflow-hidden flex flex-col">
+            <div className={containerClasses}>
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                        <thead className="bg-gray-50 dark:bg-surface-base">
+                        <thead className={theadClasses}>
                             <tr>
-                                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Timestamp</th>
-                                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
-                                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actor</th>
-                                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Entity Type / ID</th>
-                                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">IP Address</th>
-                                <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Metadata</th>
+                                <th scope="col" className={thClasses}>Timestamp</th>
+                                <th scope="col" className={thClasses}>Action</th>
+                                <th scope="col" className={thClasses}>Actor</th>
+                                <th scope="col" className={`${thClasses} w-64`}>Entity Type / ID</th>
+                                <th scope="col" className={thClasses}>IP Address</th>
+                                <th scope="col" className={`${thClasses} text-right`}>Metadata</th>
                             </tr>
                         </thead>
-                        <tbody className="bg-white dark:bg-surface-elevated divide-y divide-gray-200 dark:divide-gray-700">
+                        <tbody className={tbodyClasses}>
                             {isLoading ? (
                                 <tr>
                                     <td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">Loading audit logs...</td>
@@ -100,36 +120,49 @@ export const AuditLogViewerIsland = () => {
                             ) : (
                                 logs.map((log) => (
                                     <React.Fragment key={log.id}>
-                                        <tr className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                                                {new Date(log.created_at).toLocaleString()}
+                                        <tr className={trClasses}>
+                                            <td className={tdClasses}>
+                                                {formatDateTime(log.created_at)}
                                             </td>
                                             <td className="px-4 py-4 whitespace-nowrap">
                                                 {getActionBadge(log.action)}
                                             </td>
                                             <td className="px-4 py-4 whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                                        {log.actor_details ? log.actor_details.username : 'Unknown'}
-                                                    </span>
-                                                    <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-                                                        {log.actor}
-                                                    </span>
+                                                <div className="flex items-center">
+                                                    {log.actor_details?.avatar ? (
+                                                        <img 
+                                                            src={log.actor_details.avatar} 
+                                                            alt={log.actor_details.username} 
+                                                            className="flex-shrink-0 h-8 w-8 rounded-full object-cover border border-gray-200 dark:border-gray-700 mr-3" 
+                                                        />
+                                                    ) : (
+                                                        <div className="flex-shrink-0 h-8 w-8 bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 rounded-full flex items-center justify-center font-bold text-xs mr-3 border border-transparent">
+                                                            {(log.actor_details?.username || 'U').charAt(0).toUpperCase()}
+                                                        </div>
+                                                    )}
+                                                    <div className="flex flex-col">
+                                                        <span className={textPrimaryClasses}>
+                                                            {log.actor_details ? log.actor_details.username : 'Unknown'}
+                                                        </span>
+                                                        <span className={textSecondaryClasses}>
+                                                            {log.actor}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-4 whitespace-nowrap">
+                                            <td className="px-4 py-4 max-w-xs">
                                                 <div className="flex flex-col">
-                                                    <span className="text-sm text-gray-900 dark:text-white">
+                                                    <span className={`${textBodyClasses} truncate`} title={log.entity_type}>
                                                         {log.entity_type}
                                                     </span>
                                                     {log.entity_id && (
-                                                        <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                                                        <span className={`${textSecondaryClasses} truncate`} title={log.entity_id}>
                                                             ID: {log.entity_id}
                                                         </span>
                                                     )}
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono">
+                                            <td className={tdIpClasses}>
                                                 {log.ip_address}
                                             </td>
                                             <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -137,7 +170,7 @@ export const AuditLogViewerIsland = () => {
                                                     onClick={() => toggleJsonViewer(log.id)}
                                                     aria-expanded={expandedLogId === log.id}
                                                     aria-label="View Metadata"
-                                                    className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-primary-700 bg-primary-50 hover:bg-primary-100 dark:text-primary-400 dark:bg-primary-900/20 dark:hover:bg-primary-900/40 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                                    className={btnClasses}
                                                 >
                                                     {expandedLogId === log.id ? 'Hide JSON' : 'View JSON'}
                                                 </button>
@@ -146,7 +179,7 @@ export const AuditLogViewerIsland = () => {
                                         {/* Collapsible JSON Viewer */}
                                         {expandedLogId === log.id && (
                                             <tr>
-                                                <td colSpan={6} className="bg-gray-50 dark:bg-surface-base p-4 border-t-0 border-b border-gray-200 dark:border-gray-700">
+                                                <td colSpan={6} className={getThemedClass('p-4 border-t-0 border-b', 'bg-gray-50 border-gray-200', 'dark:bg-surface-base dark:border-gray-700')}>
                                                     <div className="max-h-64 overflow-y-auto rounded bg-gray-900 p-4">
                                                         <pre className="text-xs text-green-400 font-mono whitespace-pre-wrap">
                                                             {JSON.stringify(log.metadata_json, null, 2)}
@@ -167,7 +200,7 @@ export const AuditLogViewerIsland = () => {
                     <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                         <div>
                             <p className="text-sm text-gray-700 dark:text-gray-300">
-                                Showing <span className="font-medium">{totalResults > 0 ? (currentPage - 1) * 10 + 1 : 0}</span> to <span className="font-medium">{Math.min(currentPage * 10, totalResults)}</span> of <span className="font-medium">{totalResults}</span> results
+                                Showing <span className="font-medium">{totalResults > 0 ? (currentPage - 1) * 20 + 1 : 0}</span> to <span className="font-medium">{Math.min(currentPage * 20, totalResults)}</span> of <span className="font-medium">{totalResults}</span> results
                             </p>
                         </div>
                         <div>
@@ -181,7 +214,7 @@ export const AuditLogViewerIsland = () => {
                                 </button>
                                 <button
                                     onClick={() => setCurrentPage(p => p + 1)}
-                                    disabled={currentPage * 10 >= totalResults}
+                                    disabled={currentPage * 20 >= totalResults}
                                     className="relative inline-flex items-center px-4 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-surface-base text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
                                 >
                                     Next

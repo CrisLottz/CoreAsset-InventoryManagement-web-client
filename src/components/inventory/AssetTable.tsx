@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '../../services/apiClient';
+import { useReadingPaneMode } from '../../hooks/useReadingPaneMode';
+import { useDateFormat } from '../../hooks/useDateFormat';
 
 interface Asset {
     id: string;
@@ -138,17 +140,21 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
         const rawValue = asset.dynamic_data?.[fieldName];
         if (!rawValue) return <span className="text-gray-400 italic text-sm">-</span>;
 
+        if (fieldMeta.field_type === 'DATE') {
+            return formatDate(rawValue);
+        }
+
         if (fieldMeta.field_type === 'COLOR_STATUS') {
             const optionMeta = fieldMeta.options_metadata?.find((opt: any) => opt.value === rawValue);
             const label = optionMeta?.label || rawValue;
             const colorName = optionMeta?.color?.toLowerCase() || 'gray'; 
             
             const themeMap: Record<string, { bg: string, text: string, border: string, dot: string }> = {
-                green: { bg: 'bg-green-50 dark:bg-green-900/20', text: 'text-green-700 dark:text-green-400', border: 'border-green-200 dark:border-green-900/50', dot: 'bg-green-500' },
-                yellow: { bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-700 dark:text-yellow-400', border: 'border-yellow-200 dark:border-yellow-900/50', dot: 'bg-yellow-500' },
-                red: { bg: 'bg-red-50 dark:bg-red-900/20', text: 'text-red-700 dark:text-red-400', border: 'border-red-200 dark:border-red-900/50', dot: 'bg-red-500' },
-                purple: { bg: 'bg-purple-50 dark:bg-purple-900/20', text: 'text-purple-700 dark:text-purple-400', border: 'border-purple-200 dark:border-purple-900/50', dot: 'bg-purple-500' },
-                gray: { bg: 'bg-gray-50 dark:bg-gray-900/20', text: 'text-gray-700 dark:text-gray-400', border: 'border-gray-200 dark:border-gray-700/50', dot: 'bg-gray-500' }
+                green: { bg: getThemedClass('', 'bg-green-50', 'dark:bg-green-900/20'), text: getThemedClass('', 'text-green-700', 'dark:text-green-400'), border: getThemedClass('', 'border-green-200', 'dark:border-green-900/50'), dot: 'bg-green-500' },
+                yellow: { bg: getThemedClass('', 'bg-yellow-50', 'dark:bg-yellow-900/20'), text: getThemedClass('', 'text-yellow-700', 'dark:text-yellow-400'), border: getThemedClass('', 'border-yellow-200', 'dark:border-yellow-900/50'), dot: 'bg-yellow-500' },
+                red: { bg: getThemedClass('', 'bg-red-50', 'dark:bg-red-900/20'), text: getThemedClass('', 'text-red-700', 'dark:text-red-400'), border: getThemedClass('', 'border-red-200', 'dark:border-red-900/50'), dot: 'bg-red-500' },
+                purple: { bg: getThemedClass('', 'bg-purple-50', 'dark:bg-purple-900/20'), text: getThemedClass('', 'text-purple-700', 'dark:text-purple-400'), border: getThemedClass('', 'border-purple-200', 'dark:border-purple-900/50'), dot: 'bg-purple-500' },
+                gray: { bg: getThemedClass('', 'bg-gray-50', 'dark:bg-gray-900/20'), text: getThemedClass('', 'text-gray-700', 'dark:text-gray-400'), border: getThemedClass('', 'border-gray-200', 'dark:border-gray-700/50'), dot: 'bg-gray-500' }
             };
             const theme = themeMap[colorName] || themeMap.gray;
 
@@ -198,6 +204,13 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
         .map(c => c.name)
         .filter(name => name !== pkLabel && name.toLowerCase() !== 'internal tag');
 
+    const { mode, getThemedClass } = useReadingPaneMode();
+    const { formatDate } = useDateFormat();
+    const containerClasses = getThemedClass('border rounded-lg overflow-hidden', 'bg-white border-gray-200', 'dark:bg-surface-elevated dark:border-gray-700 dark:text-gray-100');
+
+    const fixedThClasses = getThemedClass('', 'bg-gray-200', 'dark:bg-gray-800');
+    const fixedTdClasses = getThemedClass('transition-colors', 'bg-gray-50 group-hover:bg-gray-100', 'dark:bg-gray-800/40 dark:group-hover:bg-gray-700/50');
+
     return (
         <div className="space-y-4 relative">
             
@@ -211,8 +224,8 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
 
             {/* BARRA BULK ACTIONS FLOTANTE */}
             {selectedIds.size > 0 && (
-                <div className="bg-gray-100 dark:bg-surface-elevated px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 flex justify-between items-center animate-fade-in mb-4 shadow-sm">
-                    <span className="font-bold text-gray-800 dark:text-gray-200">{selectedIds.size} asset(s) selected</span>
+                <div className={getThemedClass('px-4 py-3 rounded-lg border flex justify-between items-center animate-fade-in mb-4 shadow-sm', 'bg-gray-100 border-gray-300', 'dark:bg-surface-elevated dark:border-gray-600')}>
+                    <span className={getThemedClass('font-bold', 'text-gray-800', 'dark:text-gray-200')}>{selectedIds.size} asset(s) selected</span>
                     <div className="flex items-center gap-4">
                         {bulkError && <span className="text-red-600 text-sm font-medium">{bulkError}</span>}
                         <button 
@@ -231,13 +244,13 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
                 </div>
             )}
 
-            <div className="bg-white dark:bg-surface-elevated border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+            <div className={containerClasses}>
                 <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left text-gray-700 dark:text-gray-300">
-                        <thead className="bg-gray-50 dark:bg-gray-800 text-xs uppercase font-semibold text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+                    <table className={getThemedClass('w-full text-sm text-left', 'text-gray-700', 'dark:text-gray-300')}>
+                        <thead className={getThemedClass('text-xs uppercase font-semibold border-b', 'bg-gray-50 text-gray-500 border-gray-200', 'dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700')}>
                             <tr>
                                 {/* CHECKBOX SELECT ALL */}
-                                <th scope="col" className="px-4 py-4 w-12 text-center bg-gray-100 dark:bg-gray-700/50">
+                                <th scope="col" className={`px-4 py-4 w-12 text-center ${fixedThClasses}`}>
                                     <input 
                                         type="checkbox" 
                                         className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
@@ -245,31 +258,33 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
                                         onChange={handleSelectAll}
                                     />
                                 </th>
-                                <th scope="col" className="px-6 py-4 bg-gray-100 dark:bg-gray-700/50">{pkLabel}</th>
-                                <th scope="col" className="px-6 py-4 text-left w-24 bg-gray-100 dark:bg-gray-700/50 border-r-2 border-gray-200 dark:border-gray-700">Actions</th>
+                                <th scope="col" className={`px-6 py-4 ${fixedThClasses}`}>{pkLabel}</th>
+                                <th scope="col" className={`px-6 py-4 text-left w-24 border-r-2 ${fixedThClasses} ${getThemedClass('', 'border-gray-300', 'dark:border-gray-700')}`}>Actions</th>
                                 {orderedVisibleFields.map((fieldName) => (
-                                    <th key={fieldName} scope="col" className="px-6 py-4">{fieldName}</th>
+                                    <th key={fieldName} scope="col" className={getThemedClass('px-6 py-4', 'bg-gray-100', 'dark:bg-gray-700/50')}>
+                                        {fieldName}
+                                    </th>
                                 ))}
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody className={getThemedClass('divide-y', 'divide-gray-200 bg-white', 'dark:divide-gray-700 dark:bg-surface-elevated')}>
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={orderedVisibleFields.length + 3} className="px-6 py-12 text-center">
+                                    <td colSpan={orderedVisibleFields.length + 3} className={getThemedClass('px-6 py-8 text-center text-sm', 'text-gray-500', 'dark:text-gray-400')}>
                                         <svg className="inline w-8 h-8 animate-spin text-primary-600" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                                     </td>
                                 </tr>
                             ) : assets.length === 0 ? (
                                 <tr>
-                                    <td colSpan={orderedVisibleFields.length + 3} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                                    <td colSpan={orderedVisibleFields.length + 3} className={getThemedClass('px-6 py-8 text-center text-sm', 'text-gray-500', 'dark:text-gray-400')}>
                                         {searchQuery || showUnassigned ? "No assets match your search." : "No assets found in this module."}
                                     </td>
                                 </tr>
                             ) : (
                                 assets.map((asset) => (
-                                    <tr key={asset.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors duration-200">
+                                    <tr key={asset.id} className={getThemedClass('transition-colors group', 'hover:bg-gray-50', 'dark:hover:bg-gray-800/50')}>
                                         {/* CHECKBOX INDIVIDUAL */}
-                                        <td className="px-4 py-4 w-12 text-center bg-gray-100/50 dark:bg-gray-700/30">
+                                        <td className={`px-4 py-4 w-12 text-center ${fixedTdClasses}`}>
                                             <input 
                                                 type="checkbox" 
                                                 className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
@@ -277,13 +292,13 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
                                                 onChange={() => toggleSelection(asset.id)}
                                             />
                                         </td>
-                                        <td className="px-6 py-4 font-bold text-gray-900 dark:text-white whitespace-nowrap bg-gray-100/50 dark:bg-gray-700/30">
+                                        <td className={`px-6 py-4 font-bold whitespace-nowrap ${fixedTdClasses} ${getThemedClass('', 'text-gray-900', 'dark:text-white')}`}>
                                             {asset.internal_tag}
                                         </td>
-                                        <td className="px-6 py-4 text-left bg-gray-100/50 dark:bg-gray-700/30 border-r-2 border-gray-200 dark:border-gray-700">
+                                        <td className={`px-6 py-4 text-left border-r-2 ${fixedTdClasses} ${getThemedClass('', 'border-gray-300', 'dark:border-gray-700')}`}>
                                             <button 
                                                 onClick={() => onEditAsset(asset)}
-                                                className="text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 font-medium text-sm focus:outline-none focus:underline"
+                                                className="text-primary-600 hover:text-primary-800 dark:text-primary-400 font-medium text-sm focus:outline-none focus:underline"
                                             >
                                                 Manage
                                             </button>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '../../services/apiClient';
+import { useReadingPaneMode } from '../../hooks/useReadingPaneMode';
 import { EmployeeFormModal } from './EmployeeFormModal';
 import { CsvImportModal } from './CsvImportModal';
 
@@ -204,6 +205,13 @@ export default function EmployeeTableIsland() {
         setSelectedIds(newSet);
     };
 
+    const handleBulkPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setBulkDeleteModal({ ...bulkDeleteModal, password: e.target.value, error: null });
+    };
+
+    const { mode, getThemedClass } = useReadingPaneMode();
+    const containerClasses = getThemedClass('border rounded-lg overflow-hidden shadow-sm', 'bg-white border-gray-200', 'dark:bg-surface-elevated dark:border-gray-700 dark:text-gray-100');
+
     const executeBulkDeactivate = async () => {
         setConfirmBulkModal(false);
         setIsBulkDeactivating(true);
@@ -330,8 +338,8 @@ export default function EmployeeTableIsland() {
 
             {/* Bulk Actions Bar */}
             {selectedIds.size > 0 && (
-                <div className="bg-gray-100 dark:bg-surface-elevated px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 flex justify-between items-center animate-fade-in shadow-sm">
-                    <span className="font-bold text-gray-800 dark:text-gray-200">{selectedIds.size} employee(s) selected</span>
+                <div className={getThemedClass('px-4 py-3 rounded-lg border flex justify-between items-center animate-fade-in shadow-sm', 'bg-gray-100 border-gray-300', 'dark:bg-surface-elevated dark:border-gray-600')}>
+                    <span className={getThemedClass('font-bold', 'text-gray-800', 'dark:text-gray-200')}>{selectedIds.size} employee(s) selected</span>
                     <div className="flex items-center gap-4">
                         {statusFilter === 'active' ? (
                             <button 
@@ -379,15 +387,15 @@ export default function EmployeeTableIsland() {
             )}
 
             {/* Table */}
-            <div className="bg-white dark:bg-surface-elevated border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm overflow-hidden">
+            <div className={`border rounded-lg overflow-hidden ${containerClasses}`}>
                 <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                        <thead className="bg-gray-50 dark:bg-gray-800 text-xs uppercase font-semibold text-gray-500 dark:text-gray-400">
+                    <table className={getThemedClass('min-w-full divide-y', 'divide-gray-200', 'dark:divide-gray-700')}>
+                        <thead className={getThemedClass('uppercase font-semibold text-xs', 'bg-gray-50 text-gray-500', 'dark:bg-gray-800 dark:text-gray-400')}>
                             <tr>
                                 <th scope="col" className="px-6 py-4 text-left w-12">
                                     <input 
                                         type="checkbox" 
-                                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 bg-white dark:bg-gray-700"
+                                        className={getThemedClass('rounded border-gray-300 text-primary-600 focus:ring-primary-500', 'bg-white', 'dark:bg-gray-700')}
                                         checked={employees.length > 0 && selectedIds.size === employees.filter(e => e.is_active === (statusFilter === 'active')).length && employees.filter(e => e.is_active === (statusFilter === 'active')).length > 0}
                                         onChange={toggleSelectAll}
                                         disabled={employees.filter(e => e.is_active === (statusFilter === 'active')).length === 0}
@@ -402,7 +410,7 @@ export default function EmployeeTableIsland() {
                                 <th scope="col" className="px-6 py-4 text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="bg-white dark:bg-surface-elevated divide-y divide-gray-200 dark:divide-gray-700">
+                        <tbody className={getThemedClass('divide-y', 'bg-white divide-gray-200', 'dark:bg-surface-elevated dark:divide-gray-700')}>
                             {isLoading ? (
                                 <tr>
                                     <td colSpan={7} className="px-6 py-12 text-center">
@@ -414,18 +422,18 @@ export default function EmployeeTableIsland() {
                                 </tr>
                             ) : employees.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                                    <td colSpan={7} className={getThemedClass('px-6 py-12 text-center', 'text-gray-500', 'dark:text-gray-400')}>
                                         No employees found matching your criteria.
                                     </td>
                                 </tr>
                             ) : (
                                 employees.map((emp) => (
-                                    <tr key={emp.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                                    <tr key={emp.id} className={getThemedClass('transition-colors', 'hover:bg-gray-50', 'dark:hover:bg-gray-800/50')}>
                                         <td className="px-6 py-4 whitespace-nowrap text-left">
                                             {emp.is_active === (statusFilter === 'active') && (
                                                 <input 
                                                     type="checkbox" 
-                                                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 bg-white dark:bg-gray-700"
+                                                    className={getThemedClass('rounded border-gray-300 text-primary-600 focus:ring-primary-500', 'bg-white', 'dark:bg-gray-700')}
                                                     checked={selectedIds.has(emp.id)}
                                                     onChange={() => toggleSelection(emp.id)}
                                                     aria-label={`Select ${emp.first_name}`}
@@ -433,17 +441,17 @@ export default function EmployeeTableIsland() {
                                             )}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="font-bold text-gray-900 dark:text-white">
+                                            <div className={getThemedClass('font-bold', 'text-gray-900', 'dark:text-white')}>
                                                 {emp.first_name} {emp.last_name}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                                        <td className={getThemedClass('px-6 py-4 whitespace-nowrap text-sm', 'text-gray-600', 'dark:text-gray-300')}>
                                             {emp.job_title}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono">
+                                        <td className={getThemedClass('px-6 py-4 whitespace-nowrap text-sm font-mono', 'text-gray-500', 'dark:text-gray-400')}>
                                             {emp.employee_number || '-'}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                                        <td className={getThemedClass('px-6 py-4 whitespace-nowrap text-sm', 'text-gray-600', 'dark:text-gray-300')}>
                                             {emp.email || '-'}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm">

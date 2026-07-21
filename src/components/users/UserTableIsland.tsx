@@ -13,6 +13,7 @@ export interface User {
     assigned_locations: string[];
     groups: number[];
     user_permissions: number[];
+    avatar?: string | null;
 }
 
 export default function UserTableIsland() {
@@ -138,9 +139,17 @@ export default function UserTableIsland() {
                                     <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center">
-                                                <div className="flex-shrink-0 h-10 w-10 bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 rounded-full flex items-center justify-center font-bold text-lg">
-                                                    {u.username.charAt(0).toUpperCase()}
-                                                </div>
+                                                {u.avatar ? (
+                                                    <img 
+                                                        src={u.avatar} 
+                                                        alt={u.username} 
+                                                        className="flex-shrink-0 h-10 w-10 rounded-full object-cover border border-gray-200 dark:border-gray-700" 
+                                                    />
+                                                ) : (
+                                                    <div className="flex-shrink-0 h-10 w-10 bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 rounded-full flex items-center justify-center font-bold text-lg">
+                                                        {u.username.charAt(0).toUpperCase()}
+                                                    </div>
+                                                )}
                                                 <div className="ml-4">
                                                     <div className="text-sm font-medium text-gray-900 dark:text-white">
                                                         {u.username}

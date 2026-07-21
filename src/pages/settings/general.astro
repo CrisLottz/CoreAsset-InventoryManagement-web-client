@@ -1,33 +1,47 @@
 ---
-import Layout from '../../layouts/DashboardLayout.astro';
-import { ThemeToggle } from '../../components/settings/ThemeToggle.tsx';
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import { AppearanceSettingsIsland } from '../../components/settings/AppearanceSettingsIsland';
+import { SecuritySettingsIsland } from '../../components/settings/SecuritySettingsIsland';
+import { PreferencesSettingsIsland } from '../../components/settings/PreferencesSettingsIsland';
 ---
 
-<Layout title="General Configuration">
-    <div class="max-w-4xl mx-auto space-y-8">
-        <header class="mb-8">
-            <div class="flex items-center gap-4">
-                <a href="/dashboard" class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white bg-white dark:bg-surface-elevated border border-gray-200 dark:border-gray-700 rounded shadow-sm transition-colors" aria-label="Back to dashboard">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                </a>
-                <h1 class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white tracking-tight" style="letter-spacing: -0.02em; line-height: 1.1;">
+<DashboardLayout title="General Configuration">
+    <div class="h-full flex flex-col">
+        <!-- Header -->
+        <header class="flex-none px-6 py-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-elevated">
+            <div class="max-w-7xl mx-auto">
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white tracking-tight leading-tight">
                     General Configuration
                 </h1>
+                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    Manage your personal appearance preferences and account security.
+                </p>
             </div>
-            <p class="mt-2 text-sm md:text-base text-gray-600 dark:text-gray-400">
-                Manage global settings and personalization options for your CoreAsset instance.
-            </p>
         </header>
 
-        <section class="bg-white dark:bg-surface-elevated border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm">
-            <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Interface Preferences</h2>
-            <div class="flex items-center justify-between py-4 border-t border-gray-100 dark:border-gray-800">
-                <div>
-                    <h3 class="text-sm font-bold text-gray-800 dark:text-gray-200">Theme Mode</h3>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Switch between light and dark mode, or follow your OS preference.</p>
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto bg-gray-50 dark:bg-surface-base p-6">
+            <div class="max-w-7xl mx-auto space-y-6">
+                <!-- Preferences Settings -->
+                <div class="w-full">
+                    <PreferencesSettingsIsland client:load />
                 </div>
-                <ThemeToggle client:only="react" />
+
+                <!-- Grid layout for the settings cards -->
+                <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+                    
+                    <!-- Appearance Settings (Left/Top) -->
+                    <div class="xl:col-span-7">
+                        <AppearanceSettingsIsland client:load />
+                    </div>
+
+                    <!-- Security Settings (Right/Bottom) -->
+                    <div class="xl:col-span-5">
+                        <SecuritySettingsIsland client:load />
+                    </div>
+
+                </div>
             </div>
-        </section>
+        </main>
     </div>
-</Layout>
+</DashboardLayout>

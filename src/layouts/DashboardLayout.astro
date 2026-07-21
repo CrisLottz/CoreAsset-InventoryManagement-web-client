@@ -25,6 +25,16 @@ const { title } = Astro.props;
                 } else {
                     document.documentElement.classList.remove('dark');
                 }
+
+                const colorVars = localStorage.getItem('theme_colors');
+                if (colorVars) {
+                    try {
+                        const parsed = JSON.parse(colorVars);
+                        for (const [key, value] of Object.entries(parsed)) {
+                            document.documentElement.style.setProperty(key, value);
+                        }
+                    } catch(e) {}
+                }
             })();
         </script>
     </head>
