@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { apiClient } from '../../services/apiClient';
+import { useAuth, AuthProvider } from '../../context/AuthContext';
 
 interface Category {
     id: string;
@@ -37,12 +38,21 @@ const SYSTEM_ICONS: Record<string, string> = {
     'key': 'M15 7a2 2 0 012 2m4 0a6 6 0 11-7.743-5.743L11 5H9v2H7v2H4a1 1 0 00-1 1v3a1 1 0 001 1h6.757A6 6 0 0121 9z'
 };
 
-export const SidebarIsland = () => {
+const SidebarContent = () => {
+    const { user } = useAuth();
     const [categories, setCategories] = useState<Category[]>([]);
     const [isInventoryOpen, setIsInventoryOpen] = useState(true);
     const [isPeopleOpen, setIsPeopleOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+
+    const isSuperAdmin = user?.is_staff || false;
+    const permissions = user?.permissions || [];
+
+    const canViewEmployees = isSuperAdmin || permissions.includes('employees.view_employee');
+    const canViewUsers = isSuperAdmin || permissions.includes('users.view_user');
+    const canViewRoles = isSuperAdmin || permissions.includes('rbac.view_role') || permissions.includes('auth.view_group');
+    const showPeopleAccordion = canViewEmployees || canViewUsers || canViewRoles;
 
     useEffect(() => {
         apiClient.get('/assets/categories/')
@@ -113,29 +123,31 @@ export const SidebarIsland = () => {
             </div>
 
             {/* 3. People (Dropdown: Employees, Users, Roles) */}
-            <div className="pt-2">
-                <button 
-                    onClick={() => setIsPeopleOpen(!isPeopleOpen)}
-                    className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 transition-colors group"
-                >
-                    <div className="flex items-center">
-                        <svg className="w-5 h-5 mr-3 text-gray-400 group-hover:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            {showPeopleAccordion && (
+                <div className="pt-2">
+                    <button 
+                        onClick={() => setIsPeopleOpen(!isPeopleOpen)}
+                        className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 transition-colors group"
+                    >
+                        <div className="flex items-center">
+                            <svg className="w-5 h-5 mr-3 text-gray-400 group-hover:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                            People
+                        </div>
+                        <svg className={`w-4 h-4 transform transition-transform duration-200 ${isPeopleOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                         </svg>
-                        People
-                    </div>
-                    <svg className={`w-4 h-4 transform transition-transform duration-200 ${isPeopleOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                </button>
-                {isPeopleOpen && (
-                    <div className="mt-1 space-y-1 pl-10">
-                        <a href="/employees" className="block px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800">Company Employees</a>
-                        <a href="#" className="block px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800">Platform Users</a>
-                        <a href="#" className="block px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800">Roles & Permissions</a>
-                    </div>
-                )}
-            </div>
+                    </button>
+                    {isPeopleOpen && (
+                        <div className="mt-1 space-y-1 pl-10">
+                            {canViewEmployees && <a href="/employees" className="block px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800">Company Employees</a>}
+                            {canViewUsers && <a href="/users/" className="block px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800">Platform Users</a>}
+                            {canViewRoles && <a href="/roles/" className="block px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800">Roles & Permissions</a>}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* 4. Locations/Offices */}
             <div className="pt-2">
@@ -183,5 +195,13 @@ export const SidebarIsland = () => {
                 )}
             </div>
         </nav>
+    );
+};
+
+export const SidebarIsland = () => {
+    return (
+        <AuthProvider>
+            <SidebarContent />
+        </AuthProvider>
     );
 };
