@@ -11,6 +11,7 @@ interface User {
     role?: string;
     is_staff: boolean;
     permissions?: string[];
+    avatar?: string | null;
 }
 
 interface AuthContextType {
@@ -22,31 +23,31 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mantenemos un caché a nivel de módulo para compartir entre las diferentes Islas de React
+// Maintain module-level cache to share between React Islands
 let cachedUser: User | null = null;
 let fetchUserPromise: Promise<any> | null = null;
 let isFetched = false;
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-    // IMPORTANTE: Inicializamos siempre en null/true para que coincida con el servidor (SSR)
-    // y evitar errores de hidratación.
+    // IMPORTANT: Always initialize to null/true to match server (SSR)
+    // and avoid hydration errors.
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    const checkAuth = async () => {
-        // Si ya lo trajimos exitosamente, usamos el caché
-        if (isFetched) {
+    const checkAuth = async (force = false) => {
+        // If already fetched successfully and not forcing, use cache
+        if (isFetched && !force) {
             setUser(cachedUser);
             setIsLoading(false);
             return;
         }
 
         try {
-            // Si no hay una petición en curso, la iniciamos
-            if (!fetchUserPromise) {
+            // If there's no ongoing request or we're forcing it, initiate one
+            if (!fetchUserPromise || force) {
                 fetchUserPromise = apiClient.get('/users/me/');
             }
-            // Esperamos la petición
+            // Await the request
             const response = await fetchUserPromise;
             
             cachedUser = response.data;
@@ -62,9 +63,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     useEffect(() => {
-        // Esto solo se ejecuta en el cliente (Browser), manteniendo los
-        // datos a nivel de módulo seguros y aislados por pestaña.
+        // This only executes in the client (Browser), keeping the
+        // module-level data secure and isolated per tab.
         checkAuth();
+        
+        const handleUserUpdated = () => checkAuth(true);
+        window.addEventListener('user-updated', handleUserUpdated);
+        return () => window.removeEventListener('user-updated', handleUserUpdated);
     }, []);
 
     const logout = async () => {
@@ -73,7 +78,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } catch (error) {
             console.error(error);
         } finally {
-            // Limpiamos el caché global
+            // Clear global cache
             cachedUser = null;
             fetchUserPromise = null;
             isFetched = false;
@@ -82,9 +87,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    useEffect(() => {
-        checkAuth();
-    }, []);
+
 
     return (
         <AuthContext.Provider value={{ user, isLoading, checkAuth, logout }}>

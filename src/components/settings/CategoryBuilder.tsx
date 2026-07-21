@@ -215,7 +215,7 @@ export const CategoryBuilder = () => {
                 password: securityModal.confirmKey 
             });
         } catch (err: any) {
-            showToast(err.response?.data?.detail || "Contraseña incorrecta. Operación denegada.", "error");
+            showToast(err.response?.data?.detail || "Incorrect password. Operation denied.", "error");
             return;
         }
 

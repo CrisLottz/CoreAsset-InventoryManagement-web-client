@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { useReadingPaneMode } from '../../hooks/useReadingPaneMode';
 import type { DragEndEvent } from '@dnd-kit/core'; // <-- CORRECCIÓN: Aislado como 'type'
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -62,6 +63,13 @@ const SortableItem = ({ item, onToggle }: { item: ColumnConfig, onToggle: (name:
 export const ViewEditorModal = ({ isOpen, onClose, onSave, defaultFields, currentConfig }: ViewEditorModalProps) => {
     const [columns, setColumns] = useState<ColumnConfig[]>([]);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
+    const { mode, getThemedClass } = useReadingPaneMode();
+
+    const toggleReadingPane = () => {
+        const newMode = mode === 'light' ? 'auto' : 'light';
+        localStorage.setItem('reading_pane_mode', newMode);
+        window.dispatchEvent(new Event('preferences-changed'));
+    };
 
     // Sensores de Accesibilidad para Dnd-Kit
     const sensors = useSensors(
@@ -115,6 +123,17 @@ export const ViewEditorModal = ({ isOpen, onClose, onSave, defaultFields, curren
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                         Drag to reorder columns or toggle their visibility. Changes are saved to your account.
                     </p>
+                    
+                    <div className="mb-6 p-4 border rounded-lg bg-gray-50 dark:bg-surface-base border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                        <div>
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">Light Reading Pane</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Force table to be light while keeping sidebar dark</p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" className="sr-only peer" checked={mode === 'light'} onChange={toggleReadingPane} aria-label="Toggle Light Reading Pane" />
+                            <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-primary-600"></div>
+                        </label>
+                    </div>
 
                     {showResetConfirm ? (
                         <div className="mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-900/50 rounded text-sm text-yellow-800 dark:text-yellow-400" aria-live="polite">
