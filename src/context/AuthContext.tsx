@@ -10,6 +10,7 @@ interface User {
     last_name: string;
     role?: string;
     is_staff: boolean;
+    permissions?: string[];
 }
 
 interface AuthContextType {
