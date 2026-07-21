@@ -52,6 +52,7 @@ const SidebarContent = () => {
     const canViewEmployees = isSuperAdmin || permissions.includes('employees.view_employee');
     const canViewUsers = isSuperAdmin || permissions.includes('users.view_user');
     const canViewRoles = isSuperAdmin || permissions.includes('rbac.view_role') || permissions.includes('auth.view_group');
+    const canViewAuditLogs = isSuperAdmin || permissions.includes('audit.view_auditlog');
     const showPeopleAccordion = canViewEmployees || canViewUsers || canViewRoles;
 
     useEffect(() => {
@@ -161,14 +162,16 @@ const SidebarContent = () => {
             </div>
 
             {/* 5. Audit Logs */}
-            <div className="pt-2">
-                <a href="#" className="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 transition-colors">
-                    <svg className="w-5 h-5 mr-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    Audit Logs
-                </a>
-            </div>
+            {canViewAuditLogs && (
+                <div className="pt-2">
+                    <a href="/audit-logs/" className="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 transition-colors">
+                        <svg className="w-5 h-5 mr-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Audit Logs
+                    </a>
+                </div>
+            )}
 
             {/* 6. Settings (Dropdown: Category Designer, General Settings) */}
             <div className="pt-2">
