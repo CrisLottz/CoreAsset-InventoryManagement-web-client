@@ -73,7 +73,23 @@ export const InventoryView = ({ categoryId }: InventoryViewProps) => {
                                      || prefRes.data?.find((p: any) => p.category === categoryId);
                     
                     if (userPref && userPref.columns_config && userPref.columns_config.length > 0) {
-                        setColumnsConfig(userPref.columns_config);
+                        // Reconcile saved preferences with current schema
+                        const currentFields = fetchedStructure.fields;
+                        const savedConfig = userPref.columns_config;
+                        
+                        // Keep saved columns that still exist in the schema
+                        const reconciledConfig = savedConfig.filter((col: any) => 
+                            currentFields.some((f: any) => f.name === col.name)
+                        );
+                        
+                        // Add any new fields that are in the schema but not in saved config
+                        currentFields.forEach((field: any) => {
+                            if (!reconciledConfig.some((col: any) => col.name === field.name)) {
+                                reconciledConfig.push({ name: field.name, is_visible: true });
+                            }
+                        });
+                        
+                        setColumnsConfig(reconciledConfig);
                     } else {
                         setColumnsConfig(fetchedStructure.fields.map((f: any) => ({ name: f.name, is_visible: true })));
                     }
