@@ -26,9 +26,10 @@ interface AssetTableProps {
     ordering: string;
     columnsConfig: ColumnConfig[]; 
     showUnassigned: boolean;
+    onShowToast?: (msg: string, type: 'success' | 'warning' | 'error' | 'info') => void;
 }
 
-export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAsset, searchQuery, searchField, ordering, columnsConfig, showUnassigned }: AssetTableProps) => {
+export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAsset, searchQuery, searchField, ordering, columnsConfig, showUnassigned, onShowToast }: AssetTableProps) => {
     const [assets, setAssets] = useState<Asset[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [page, setPage] = useState(1);
@@ -38,6 +39,9 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [isBulkDeleting, setIsBulkDeleting] = useState(false);
     const [bulkError, setBulkError] = useState<string | null>(null);
+
+    // Confirmation Modal state for Bulk Delete
+    const [confirmBulkModal, setConfirmBulkModal] = useState(false);
 
     // Resetear selecciones cuando se cambia de página o filtros
     useEffect(() => {
@@ -89,21 +93,31 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
         setSelectedIds(newSet);
     };
 
+    const promptBulkDelete = () => {
+        setConfirmBulkModal(true);
+    };
+
     const executeBulkDelete = async () => {
-        if (!window.confirm(`Are you sure you want to permanently delete ${selectedIds.size} assets? This action is irreversible.`)) return;
-        
+        setConfirmBulkModal(false);
         setIsBulkDeleting(true);
         setBulkError(null);
         try {
             // Paralelización de peticiones DELETE hacia Django
             await Promise.all(Array.from(selectedIds).map(id => apiClient.delete(`/assets/inventory/${id}/`)));
+            
+            const count = selectedIds.size;
             setSelectedIds(new Set());
             fetchInventory(); // Refrescar la tabla tras el borrado
+            if (onShowToast) onShowToast(`Successfully deleted ${count} assets.`, 'error'); // Usar error/red para borrados como se solicitó antes
         } catch (err: any) {
             if (err.response?.status === 403) {
-                setBulkError("Access Denied: Your assigned role lacks permission to delete assets.");
+                const msg = "Access Denied: Your assigned role lacks permission to delete assets.";
+                setBulkError(msg);
+                if (onShowToast) onShowToast(msg, 'error');
             } else {
-                setBulkError("An error occurred while deleting one or more assets. Partial deletion may have occurred.");
+                const msg = "An error occurred while deleting one or more assets. Partial deletion may have occurred.";
+                setBulkError(msg);
+                if (onShowToast) onShowToast(msg, 'error');
             }
         } finally {
             setIsBulkDeleting(false);
@@ -193,22 +207,23 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
 
             {/* BARRA BULK ACTIONS FLOTANTE */}
             {selectedIds.size > 0 && (
-                <div className="bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-lg p-3 flex justify-between items-center animate-fade-in">
-                    <span className="text-sm font-bold text-primary-800 dark:text-primary-400">
-                        {selectedIds.size} asset(s) selected
-                    </span>
-                    <button
-                        onClick={executeBulkDelete}
-                        disabled={isBulkDeleting}
-                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded shadow-sm transition-colors focus:outline-none disabled:opacity-50 flex items-center gap-2"
-                    >
-                        {isBulkDeleting ? (
-                            <svg className="w-4 h-4 animate-spin text-white" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                        ) : (
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-4v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                        )}
-                        Delete Selected
-                    </button>
+                <div className="bg-gray-100 dark:bg-surface-elevated px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 flex justify-between items-center animate-fade-in mb-4 shadow-sm">
+                    <span className="font-bold text-gray-800 dark:text-gray-200">{selectedIds.size} asset(s) selected</span>
+                    <div className="flex items-center gap-4">
+                        {bulkError && <span className="text-red-600 text-sm font-medium">{bulkError}</span>}
+                        <button 
+                            onClick={promptBulkDelete}
+                            disabled={isBulkDeleting}
+                            className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold rounded flex items-center gap-2 focus:ring-2 focus:ring-red-500 transition-colors"
+                        >
+                            {isBulkDeleting ? 'Deleting...' : (
+                                <>
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    Delete Selected
+                                </>
+                            )}
+                        </button>
+                    </div>
                 </div>
             )}
 
@@ -309,6 +324,42 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
                             <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-all text-sm leading-relaxed">
                                 {expandedText.content}
                             </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Confirmation Modal for Bulk Delete */}
+            {confirmBulkModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm transition-opacity">
+                    <div className="bg-white dark:bg-surface-elevated rounded-lg shadow-xl w-full max-w-md overflow-hidden transform transition-all animate-fade-in border border-gray-200 dark:border-gray-700">
+                        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-surface-base flex items-center gap-3">
+                            <div className="bg-red-100 text-red-600 p-2 rounded-full">
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                            </div>
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Confirm Bulk Deletion</h3>
+                        </div>
+                        <div className="px-6 py-5">
+                            <p className="text-gray-700 dark:text-gray-300">
+                                Are you sure you want to permanently delete <strong>{selectedIds.size}</strong> assets?
+                            </p>
+                            <p className="text-red-500 font-bold mt-2 text-sm">
+                                This action is irreversible and will destroy all associated data.
+                            </p>
+                        </div>
+                        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-surface-base flex justify-end gap-3">
+                            <button 
+                                onClick={() => setConfirmBulkModal(false)}
+                                className="px-4 py-2 bg-white dark:bg-surface-elevated border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                onClick={executeBulkDelete}
+                                className="px-4 py-2 bg-red-600 text-white rounded font-bold hover:bg-red-700 transition-colors focus:ring-2 focus:ring-red-500"
+                            >
+                                Yes, delete permanently
+                            </button>
                         </div>
                     </div>
                 </div>

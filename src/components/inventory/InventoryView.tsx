@@ -36,6 +36,22 @@ export const InventoryView = ({ categoryId }: InventoryViewProps) => {
     // NUEVO ESTADO: Controla la bandera para activos sin asignar
     const [showUnassigned, setShowUnassigned] = useState(false);
 
+    // Toast state
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'warning' | 'error' | 'info' } | null>(null);
+    const [isExiting, setIsExiting] = useState(false);
+
+    const showToast = (message: string, type: 'success' | 'warning' | 'error' | 'info') => {
+        setToast({ message, type });
+        setIsExiting(false);
+        setTimeout(() => {
+            setIsExiting(true);
+            setTimeout(() => {
+                setToast(null);
+                setIsExiting(false);
+            }, 300); // Wait for transition duration before unmounting
+        }, 3000); // Time to display the toast
+    };
+
     useEffect(() => {
         if (!categoryId) return;
         
@@ -78,9 +94,10 @@ export const InventoryView = ({ categoryId }: InventoryViewProps) => {
             });
             setColumnsConfig(newConfig);
             setIsViewEditorOpen(false);
+            showToast("View preferences saved successfully.", "success");
         } catch (error) {
             console.error("Error saving view preferences", error);
-            alert("Failed to save view preferences.");
+            showToast("Failed to save view preferences.", "error");
         }
     };
 
@@ -117,6 +134,24 @@ export const InventoryView = ({ categoryId }: InventoryViewProps) => {
                     <span>Register {structure.name}</span>
                 </button>
             </header>
+
+            {/* Toast Notification */}
+            {toast && (
+                <div 
+                    className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-50 px-4 py-2 rounded shadow-lg text-white font-medium flex items-center gap-2 transition-opacity duration-300 ${
+                        toast.type === 'success' ? 'bg-green-500' :
+                        toast.type === 'error' ? 'bg-red-500' :
+                        toast.type === 'warning' ? 'bg-yellow-500' :
+                        'bg-blue-500'
+                    } ${isExiting ? 'opacity-0' : 'opacity-100'}`}
+                >
+                    {toast.type === 'success' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>}
+                    {toast.type === 'error' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>}
+                    {toast.type === 'info' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>}
+                    {toast.type === 'warning' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>}
+                    {toast.message}
+                </div>
+            )}
 
             <div className="flex flex-col md:flex-row gap-4 justify-between bg-white dark:bg-surface-elevated p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
                 <div className="flex flex-col sm:flex-row w-full md:w-auto gap-2">
@@ -198,12 +233,14 @@ export const InventoryView = ({ categoryId }: InventoryViewProps) => {
                 categoryId={categoryId!} structure={structure} refreshTrigger={refreshCount} onEditAsset={handleOpenEditModal} 
                 searchQuery={searchQuery} searchField={searchField} ordering={ordering}
                 columnsConfig={columnsConfig} 
-                showUnassigned={showUnassigned} // <-- PASAMOS LA BANDERA
+                showUnassigned={showUnassigned} 
+                onShowToast={showToast}
             />
 
             <AssetFormModal 
                 isOpen={isModalOpen} onClose={handleCloseModal} categoryId={categoryId!} structure={structure} assetToEdit={assetToEdit} 
                 onSuccess={() => { handleCloseModal(); setRefreshCount(prev => prev + 1); }}
+                onShowToast={showToast}
             />
 
             {isViewEditorOpen && (

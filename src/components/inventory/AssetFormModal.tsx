@@ -8,9 +8,10 @@ interface AssetFormModalProps {
     categoryId: string;
     structure: any;
     assetToEdit?: any; 
+    onShowToast?: (msg: string, type: 'success' | 'warning' | 'error' | 'info') => void;
 }
 
-export const AssetFormModal = ({ isOpen, onClose, onSuccess, categoryId, structure, assetToEdit }: AssetFormModalProps) => {
+export const AssetFormModal = ({ isOpen, onClose, onSuccess, categoryId, structure, assetToEdit, onShowToast }: AssetFormModalProps) => {
     const [internalTag, setInternalTag] = useState('');
     const [dynamicValues, setDynamicValues] = useState<Record<string, any>>({});
     
@@ -101,29 +102,32 @@ export const AssetFormModal = ({ isOpen, onClose, onSuccess, categoryId, structu
         try {
             if (assetToEdit) {
                 await apiClient.patch(`/assets/inventory/${assetToEdit.id}/`, payload);
+                if (onShowToast) onShowToast(`Asset ${internalTag} updated successfully.`, 'info');
             } else {
                 await apiClient.post('/assets/inventory/', payload);
+                if (onShowToast) onShowToast(`Asset ${internalTag} created successfully.`, 'success');
             }
             onSuccess();
             onClose();
         } catch (err: any) {
+            let msg = "Network error. Please check your connection.";
             const backendError = err.response?.data;
             if (backendError) {
                 if (backendError.dynamic_data) {
                     const errorKey = Object.keys(backendError.dynamic_data)[0];
-                    setError(`Validation Error in ${errorKey}: ${backendError.dynamic_data[errorKey]}`);
+                    msg = `Validation Error in ${errorKey}: ${backendError.dynamic_data[errorKey]}`;
                 } else if (backendError.location) {
-                    setError(`Location Error: ${backendError.location[0]}`);
+                    msg = `Location Error: ${backendError.location[0]}`;
                 } else if (backendError.assigned_to) {
-                    setError(`Assignment Error: ${backendError.assigned_to[0]}`);
+                    msg = `Assignment Error: ${backendError.assigned_to[0]}`;
                 } else if (backendError.internal_tag) {
-                    setError(`Tag Error: ${backendError.internal_tag[0]}`);
+                    msg = `Tag Error: ${backendError.internal_tag[0]}`;
                 } else {
-                    setError("Error saving asset. Please check the required fields.");
+                    msg = "Error saving asset. Please check the required fields.";
                 }
-            } else {
-                setError("Network error. Please check your connection.");
             }
+            setError(msg);
+            if (onShowToast) onShowToast(msg, 'error');
         } finally {
             setIsLoading(false);
         }
@@ -135,14 +139,16 @@ export const AssetFormModal = ({ isOpen, onClose, onSuccess, categoryId, structu
         setError(null);
         try {
             await apiClient.delete(`/assets/inventory/${assetToEdit.id}/`);
+            if (onShowToast) onShowToast(`Asset deleted permanently.`, 'error');
             onSuccess();
             onClose();
         } catch (err: any) {
+            let msg = "An error occurred while deleting the asset.";
             if (err.response?.status === 403) {
-                setError("Access Denied: Your assigned role lacks permission to delete assets.");
-            } else {
-                setError("An error occurred while deleting the asset.");
+                msg = "Access Denied: Your assigned role lacks permission to delete assets.";
             }
+            setError(msg);
+            if (onShowToast) onShowToast(msg, 'error');
             setDeleteState('IDLE');
         }
     };
