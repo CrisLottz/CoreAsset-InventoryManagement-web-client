@@ -5,9 +5,10 @@ interface CsvImportModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
+    onRefresh?: () => void;
 }
 
-export const CsvImportModal = ({ isOpen, onClose, onSuccess }: CsvImportModalProps) => {
+export const CsvImportModal = ({ isOpen, onClose, onSuccess, onRefresh }: CsvImportModalProps) => {
     const [file, setFile] = useState<File | null>(null);
     const [headers, setHeaders] = useState<string[]>([]);
     const [mapping, setMapping] = useState<Record<string, string>>({});
@@ -15,6 +16,7 @@ export const CsvImportModal = ({ isOpen, onClose, onSuccess }: CsvImportModalPro
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
+    const [detailedErrors, setDetailedErrors] = useState<any[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const TARGET_FIELDS = [
@@ -103,15 +105,18 @@ export const CsvImportModal = ({ isOpen, onClose, onSuccess }: CsvImportModalPro
             
             if (response.status === 207) {
                 // Partial success
-                setSuccessMsg(`Imported ${response.data.created} employees. Some rows had errors and were skipped.`);
+                setSuccessMsg(`Imported ${response.data.created} employees. The following rows had errors and were skipped:`);
+                if (response.data.errors) {
+                    setDetailedErrors(response.data.errors);
+                }
+                if (onRefresh) onRefresh();
             } else {
                 setSuccessMsg(`Successfully imported ${response.data.created} employees.`);
+                setDetailedErrors([]);
+                setTimeout(() => {
+                    onSuccess();
+                }, 3000);
             }
-            
-            // Allow user to read success message before closing automatically
-            setTimeout(() => {
-                onSuccess();
-            }, 3000);
             
         } catch (err: any) {
             setError(err.response?.data?.error || "An error occurred during import.");
@@ -127,6 +132,7 @@ export const CsvImportModal = ({ isOpen, onClose, onSuccess }: CsvImportModalPro
         setMapping({});
         setError(null);
         setSuccessMsg(null);
+        setDetailedErrors([]);
         onClose();
     };
 
@@ -171,11 +177,24 @@ export const CsvImportModal = ({ isOpen, onClose, onSuccess }: CsvImportModalPro
                     )}
 
                     {successMsg && (
-                        <div className="mb-4 p-4 bg-semantic-success/10 text-semantic-success rounded-md flex items-center gap-2">
-                            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-sm font-medium">{successMsg}</span>
+                        <div className="mb-4 p-4 bg-semantic-success/10 text-semantic-success rounded-md flex flex-col gap-2">
+                            <div className="flex items-center gap-2">
+                                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                <span className="text-sm font-medium">{successMsg}</span>
+                            </div>
+                            {detailedErrors.length > 0 && (
+                                <div className="mt-2 bg-white/50 dark:bg-black/20 p-3 rounded text-xs text-gray-800 dark:text-gray-200">
+                                    <ul className="list-disc pl-5 space-y-1">
+                                        {detailedErrors.map((err, i) => (
+                                            <li key={i}>
+                                                <strong>Row {err.row}:</strong> {Object.entries(err.errors).map(([key, val]) => `${key}: ${val}`).join(' | ')}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -258,7 +277,7 @@ export const CsvImportModal = ({ isOpen, onClose, onSuccess }: CsvImportModalPro
                         disabled={isLoading}
                         className="px-6 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-surface-elevated border border-gray-300 dark:border-gray-600 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 transition-colors"
                     >
-                        Cancel
+                        {detailedErrors.length > 0 ? 'Close' : 'Cancel'}
                     </button>
                     {step === 1 ? (
                         <button

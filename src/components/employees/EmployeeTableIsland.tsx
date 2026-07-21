@@ -45,6 +45,17 @@ export default function EmployeeTableIsland() {
         employeeId: null
     });
 
+    // Bulk Actions state
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [isBulkDeactivating, setIsBulkDeactivating] = useState(false);
+    const [confirmBulkModal, setConfirmBulkModal] = useState(false); // Used for Deactivate
+    const [confirmBulkReactivateModal, setConfirmBulkReactivateModal] = useState(false);
+    const [bulkDeleteModal, setBulkDeleteModal] = useState<{isOpen: boolean, password: '', error: string | null}>({
+        isOpen: false,
+        password: '',
+        error: null
+    });
+
     // Toast state
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'warning' | 'error' | 'info' } | null>(null);
     const [isExiting, setIsExiting] = useState(false);
@@ -95,6 +106,7 @@ export default function EmployeeTableIsland() {
 
     useEffect(() => {
         fetchEmployees();
+        setSelectedIds(new Set()); // Reset selections on fetch
     }, [fetchEmployees]);
 
     const openCreateForm = () => {
@@ -172,6 +184,85 @@ export default function EmployeeTableIsland() {
         }
     };
 
+    // Bulk Actions Logic
+    const toggleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.checked) {
+            // Select based on current statusFilter
+            const isSelectActive = statusFilter === 'active';
+            setSelectedIds(new Set(employees.filter(emp => emp.is_active === isSelectActive).map(e => e.id)));
+        } else {
+            setSelectedIds(new Set());
+        }
+    };
+
+    const toggleSelection = (id: string) => {
+        const newSet = new Set(selectedIds);
+        if (newSet.has(id)) newSet.delete(id);
+        else newSet.add(id);
+        setSelectedIds(newSet);
+    };
+
+    const executeBulkDeactivate = async () => {
+        setConfirmBulkModal(false);
+        setIsBulkDeactivating(true);
+        try {
+            await Promise.all(Array.from(selectedIds).map(id => apiClient.delete(`/employees/${id}/`)));
+            const count = selectedIds.size;
+            setSelectedIds(new Set());
+            fetchEmployees();
+            showToast(`Successfully deactivated ${count} employees.`, "warning");
+        } catch (err) {
+            showToast("Failed to deactivate some employees.", "error");
+        } finally {
+            setIsBulkDeactivating(false);
+        }
+    };
+
+    const executeBulkReactivate = async () => {
+        setConfirmBulkReactivateModal(false);
+        setIsBulkDeactivating(true); // Reusing the same loading state for simplicity
+        try {
+            await Promise.all(Array.from(selectedIds).map(id => apiClient.post(`/employees/${id}/reactivate/`)));
+            const count = selectedIds.size;
+            setSelectedIds(new Set());
+            fetchEmployees();
+            showToast(`Successfully reactivated ${count} employees.`, "success");
+        } catch (err) {
+            showToast("Failed to reactivate some employees.", "error");
+        } finally {
+            setIsBulkDeactivating(false);
+        }
+    };
+
+    const executeBulkHardDelete = async () => {
+        if (!bulkDeleteModal.password) {
+            setBulkDeleteModal(prev => ({...prev, error: "Password is required"}));
+            return;
+        }
+
+        setIsBulkDeactivating(true);
+        try {
+            // Promise.all to hard delete all selected
+            await Promise.all(Array.from(selectedIds).map(id => 
+                apiClient.post(`/employees/${id}/hard-delete/`, { password: bulkDeleteModal.password })
+            ));
+            const count = selectedIds.size;
+            setBulkDeleteModal(prev => ({...prev, isOpen: false}));
+            setSelectedIds(new Set());
+            fetchEmployees();
+            showToast(`Permanently deleted ${count} employees.`, "error");
+        } catch (err: any) {
+            if (err.response?.status === 403) {
+                setBulkDeleteModal(prev => ({...prev, error: "Invalid admin password."}));
+            } else {
+                setBulkDeleteModal(prev => ({...prev, error: "An unexpected error occurred."}));
+                showToast("Failed to delete some employees.", "error");
+            }
+        } finally {
+            setIsBulkDeactivating(false);
+        }
+    };
+
     return (
         <div className="space-y-6 relative">
             {/* Toast Notification */}
@@ -235,12 +326,72 @@ export default function EmployeeTableIsland() {
                 </div>
             </div>
 
+            {/* Bulk Actions Bar */}
+            {selectedIds.size > 0 && (
+                <div className="bg-gray-100 dark:bg-surface-elevated px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 flex justify-between items-center animate-fade-in shadow-sm">
+                    <span className="font-bold text-gray-800 dark:text-gray-200">{selectedIds.size} employee(s) selected</span>
+                    <div className="flex items-center gap-4">
+                        {statusFilter === 'active' ? (
+                            <button 
+                                onClick={() => setConfirmBulkModal(true)}
+                                disabled={isBulkDeactivating}
+                                className="px-4 py-2 bg-semantic-warning hover:bg-yellow-600 disabled:opacity-50 text-gray-900 font-bold rounded flex items-center gap-2 focus:ring-2 focus:ring-yellow-500 transition-colors"
+                            >
+                                {isBulkDeactivating ? 'Processing...' : (
+                                    <>
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                        Deactivate Selected
+                                    </>
+                                )}
+                            </button>
+                        ) : (
+                            <>
+                                <button 
+                                    onClick={() => setConfirmBulkReactivateModal(true)}
+                                    disabled={isBulkDeactivating}
+                                    className="px-4 py-2 bg-semantic-success hover:bg-green-700 disabled:opacity-50 text-white font-bold rounded flex items-center gap-2 focus:ring-2 focus:ring-semantic-success transition-colors"
+                                >
+                                    {isBulkDeactivating ? 'Processing...' : (
+                                        <>
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+                                            Reactivate Selected
+                                        </>
+                                    )}
+                                </button>
+                                <button 
+                                    onClick={() => setBulkDeleteModal(prev => ({...prev, isOpen: true, password: '', error: null}))}
+                                    disabled={isBulkDeactivating}
+                                    className="px-4 py-2 bg-semantic-error hover:bg-red-700 disabled:opacity-50 text-white font-bold rounded flex items-center gap-2 focus:ring-2 focus:ring-semantic-error transition-colors"
+                                >
+                                    {isBulkDeactivating ? 'Processing...' : (
+                                        <>
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                            Delete Selected
+                                        </>
+                                    )}
+                                </button>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
+
             {/* Table */}
             <div className="bg-white dark:bg-surface-elevated border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                         <thead className="bg-gray-50 dark:bg-gray-800 text-xs uppercase font-semibold text-gray-500 dark:text-gray-400">
                             <tr>
+                                <th scope="col" className="px-6 py-4 text-left w-12">
+                                    <input 
+                                        type="checkbox" 
+                                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 bg-white dark:bg-gray-700"
+                                        checked={employees.length > 0 && selectedIds.size === employees.filter(e => e.is_active === (statusFilter === 'active')).length && employees.filter(e => e.is_active === (statusFilter === 'active')).length > 0}
+                                        onChange={toggleSelectAll}
+                                        disabled={employees.filter(e => e.is_active === (statusFilter === 'active')).length === 0}
+                                        aria-label={`Select all ${statusFilter} employees`}
+                                    />
+                                </th>
                                 <th scope="col" className="px-6 py-4 text-left">Employee Name</th>
                                 <th scope="col" className="px-6 py-4 text-left">Job Title</th>
                                 <th scope="col" className="px-6 py-4 text-left">ID Number</th>
@@ -252,7 +403,7 @@ export default function EmployeeTableIsland() {
                         <tbody className="bg-white dark:bg-surface-elevated divide-y divide-gray-200 dark:divide-gray-700">
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-12 text-center">
+                                    <td colSpan={7} className="px-6 py-12 text-center">
                                         <svg className="mx-auto w-8 h-8 animate-spin text-primary-600" viewBox="0 0 24 24" fill="none">
                                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -261,13 +412,24 @@ export default function EmployeeTableIsland() {
                                 </tr>
                             ) : employees.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                                    <td colSpan={7} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                                         No employees found matching your criteria.
                                     </td>
                                 </tr>
                             ) : (
                                 employees.map((emp) => (
                                     <tr key={emp.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                                        <td className="px-6 py-4 whitespace-nowrap text-left">
+                                            {emp.is_active === (statusFilter === 'active') && (
+                                                <input 
+                                                    type="checkbox" 
+                                                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 bg-white dark:bg-gray-700"
+                                                    checked={selectedIds.has(emp.id)}
+                                                    onChange={() => toggleSelection(emp.id)}
+                                                    aria-label={`Select ${emp.first_name}`}
+                                                />
+                                            )}
+                                        </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="font-bold text-gray-900 dark:text-white">
                                                 {emp.first_name} {emp.last_name}
@@ -360,6 +522,7 @@ export default function EmployeeTableIsland() {
                 isOpen={isCsvOpen} 
                 onClose={() => setIsCsvOpen(false)} 
                 onSuccess={() => { setIsCsvOpen(false); fetchEmployees(); }} 
+                onRefresh={() => fetchEmployees()}
             />
 
             {/* Hard Delete Security Modal */}
@@ -442,8 +605,8 @@ export default function EmployeeTableIsland() {
                         <div className="p-6">
                             <p className="text-sm text-gray-600 dark:text-gray-400">
                                 {confirmModal.action === 'deactivate' 
-                                    ? "Are you sure you want to deactivate this employee? This action is non-destructive and only temporarily disables their access. They will be retained in the database for historical purposes." 
-                                    : "Are you sure you want to reactivate this employee? They will immediately regain any previous access levels mapped to their account."
+                                    ? "Are you sure you want to deactivate this employee? This action changes their status to inactive. They will be retained in the database for historical and referential purposes." 
+                                    : "Are you sure you want to reactivate this employee? Their status will be changed back to active, making them available for current assignments and references."
                                 }
                             </p>
                         </div>
@@ -464,6 +627,138 @@ export default function EmployeeTableIsland() {
                                 }`}
                             >
                                 {confirmModal.action === 'deactivate' ? 'Yes, Deactivate' : 'Yes, Reactivate'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+        {/* Bulk Deactivate Confirmation Modal */}
+            {confirmBulkModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" onClick={() => setConfirmBulkModal(false)} aria-hidden="true"></div>
+                    
+                    <div role="dialog" aria-modal="true" className="relative bg-white dark:bg-surface-elevated rounded-lg shadow-xl w-full max-w-md overflow-hidden">
+                        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
+                            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-semantic-warning/10 text-semantic-warning flex items-center justify-center">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                            </div>
+                            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Confirm Bulk Deactivation</h2>
+                        </div>
+                        
+                        <div className="p-6">
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                Are you sure you want to deactivate <strong>{selectedIds.size}</strong> employees? This action changes their status to inactive. They will be retained in the database for historical and referential purposes.
+                            </p>
+                        </div>
+
+                        <div className="px-6 py-4 bg-gray-50 dark:bg-surface-base border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+                            <button
+                                onClick={() => setConfirmBulkModal(false)}
+                                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-surface-elevated border border-gray-300 dark:border-gray-600 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={executeBulkDeactivate}
+                                className="px-4 py-2 text-sm font-medium text-gray-900 bg-semantic-warning rounded-md shadow-sm hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-semantic-warning"
+                            >
+                                Yes, Deactivate All
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Bulk Reactivate Confirmation Modal */}
+            {confirmBulkReactivateModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" onClick={() => setConfirmBulkReactivateModal(false)} aria-hidden="true"></div>
+                    
+                    <div role="dialog" aria-modal="true" className="relative bg-white dark:bg-surface-elevated rounded-lg shadow-xl w-full max-w-md overflow-hidden">
+                        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
+                            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-semantic-success/10 text-semantic-success flex items-center justify-center">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+                            </div>
+                            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Confirm Bulk Reactivation</h2>
+                        </div>
+                        
+                        <div className="p-6">
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                Are you sure you want to reactivate <strong>{selectedIds.size}</strong> employees? Their status will be changed back to active, making them available for current assignments and references.
+                            </p>
+                        </div>
+
+                        <div className="px-6 py-4 bg-gray-50 dark:bg-surface-base border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+                            <button
+                                onClick={() => setConfirmBulkReactivateModal(false)}
+                                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-surface-elevated border border-gray-300 dark:border-gray-600 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={executeBulkReactivate}
+                                className="px-4 py-2 text-sm font-medium text-white bg-semantic-success rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-semantic-success"
+                            >
+                                Yes, Reactivate All
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Bulk Delete Security Modal */}
+            {bulkDeleteModal.isOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" onClick={() => setBulkDeleteModal(prev => ({...prev, isOpen: false}))} aria-hidden="true"></div>
+                    
+                    <div role="dialog" aria-modal="true" className="relative bg-white dark:bg-surface-elevated rounded-lg shadow-xl w-full max-w-md overflow-hidden">
+                        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
+                            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-semantic-error/10 flex items-center justify-center">
+                                <svg className="w-5 h-5 text-semantic-error" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                            </div>
+                            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Permanent Bulk Deletion</h2>
+                        </div>
+                        
+                        <div className="p-6">
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                                You are about to permanently delete <strong>{selectedIds.size}</strong> employees from the database. This action cannot be undone. All linked history will lose the employee reference.
+                            </p>
+                            
+                            {bulkDeleteModal.error && (
+                                <div className="mb-4 p-3 bg-semantic-error/10 text-semantic-error rounded text-sm">
+                                    {bulkDeleteModal.error}
+                                </div>
+                            )}
+
+                            <div>
+                                <label htmlFor="bulk_admin_password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    Admin Password Required
+                                </label>
+                                <input
+                                    id="bulk_admin_password"
+                                    type="password"
+                                    autoComplete="current-password"
+                                    value={bulkDeleteModal.password}
+                                    onChange={(e) => setBulkDeleteModal(prev => ({...prev, password: e.target.value, error: null}))}
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-semantic-error bg-white dark:bg-surface-base text-gray-900 dark:text-white"
+                                    placeholder="Confirm your password"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="px-6 py-4 bg-gray-50 dark:bg-surface-base border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+                            <button
+                                onClick={() => setBulkDeleteModal(prev => ({...prev, isOpen: false}))}
+                                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-surface-elevated border border-gray-300 dark:border-gray-600 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={executeBulkHardDelete}
+                                className="px-4 py-2 text-sm font-medium text-white bg-semantic-error rounded-md shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-semantic-error"
+                            >
+                                Permanently Delete All
                             </button>
                         </div>
                     </div>
