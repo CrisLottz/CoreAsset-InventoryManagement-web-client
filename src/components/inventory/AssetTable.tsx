@@ -33,6 +33,7 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
     const [assets, setAssets] = useState<Asset[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [page, setPage] = useState(1);
+    const [totalRecords, setTotalRecords] = useState(0);
     const [expandedText, setExpandedText] = useState<{title: string, content: string} | null>(null);
 
     // ESTADOS PARA BULK ACTIONS
@@ -64,6 +65,9 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
                 }
             });
             setAssets(response.data.results || response.data);
+            if (response.data.count !== undefined) {
+                setTotalRecords(response.data.count);
+            }
         } catch (error) {
             console.error("Error fetching assets", error);
             setAssets([]);
@@ -298,15 +302,25 @@ export const AssetTable = ({ categoryId, structure, refreshTrigger = 0, onEditAs
                 </div>
             </div>
             
-            <div className="flex items-center justify-between px-4">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Page {page}</span>
-                <div className="flex gap-2">
-                    <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1 || isLoading} className="px-4 py-2 text-sm font-bold text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 dark:bg-surface-elevated dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-800 transition-colors">
-                        Previous
-                    </button>
-                    <button onClick={() => setPage(p => p + 1)} disabled={isLoading || assets.length < 10} className="px-4 py-2 text-sm font-bold text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 dark:bg-surface-elevated dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-800 transition-colors">
-                        Next
-                    </button>
+            <div className="flex flex-col sm:flex-row items-center justify-between px-4 py-2 bg-gray-50 dark:bg-surface-base border-t border-gray-200 dark:border-gray-700 rounded-b-lg">
+                <div className="text-sm text-gray-600 dark:text-gray-400 font-medium mb-2 sm:mb-0">
+                    Total records: {totalRecords}
+                </div>
+                <div className="flex items-center gap-6">
+                    <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">Page {page}</span>
+                    <div className="flex items-center gap-4">
+                        <span className="text-sm text-gray-500 dark:text-gray-500">
+                            {totalRecords === 0 ? '0' : `${(page - 1) * 10 + 1} to ${Math.min(page * 10, totalRecords)}`}
+                        </span>
+                        <div className="flex gap-2">
+                            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1 || isLoading} className="px-3 py-1.5 text-sm font-bold text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 dark:bg-surface-elevated dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-800 transition-colors focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+                            </button>
+                            <button onClick={() => setPage(p => p + 1)} disabled={isLoading || assets.length < 10} className="px-3 py-1.5 text-sm font-bold text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 dark:bg-surface-elevated dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-800 transition-colors focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 

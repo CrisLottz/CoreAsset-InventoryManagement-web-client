@@ -20,6 +20,7 @@ export default function EmployeeTableIsland() {
     // Pagination & Search & Filter
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+    const [totalRecords, setTotalRecords] = useState(0);
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedQuery, setDebouncedQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<'active' | 'inactive'>('active');
@@ -96,6 +97,7 @@ export default function EmployeeTableIsland() {
             if (res.data.count !== undefined) {
                 // Assuming default page size of 20
                 setTotalPages(Math.ceil(res.data.count / 20));
+                setTotalRecords(res.data.count);
             }
         } catch (error) {
             console.error("Failed to fetch employees", error);
@@ -477,30 +479,36 @@ export default function EmployeeTableIsland() {
                     </table>
                 </div>
                 
-                {/* Pagination (if applicable) */}
-                {totalPages > 1 && (
-                    <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50 dark:bg-surface-base">
-                        <p className="text-sm text-gray-700 dark:text-gray-300">
-                            Page <span className="font-bold">{page}</span> of <span className="font-bold">{totalPages}</span>
-                        </p>
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => setPage(p => Math.max(1, p - 1))}
-                                disabled={page === 1}
-                                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium bg-white dark:bg-surface-elevated text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                            >
-                                Previous
-                            </button>
-                            <button
-                                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                                disabled={page === totalPages}
-                                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium bg-white dark:bg-surface-elevated text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                            >
-                                Next
-                            </button>
+                {/* Pagination */}
+                <div className="flex flex-col sm:flex-row items-center justify-between px-4 py-2 bg-gray-50 dark:bg-surface-base border-t border-gray-200 dark:border-gray-700 rounded-b-lg">
+                    <div className="text-sm text-gray-600 dark:text-gray-400 font-medium mb-2 sm:mb-0">
+                        Total records: {totalRecords}
+                    </div>
+                    <div className="flex items-center gap-6">
+                        <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">Page {page} of {totalPages}</span>
+                        <div className="flex items-center gap-4">
+                            <span className="text-sm text-gray-500 dark:text-gray-500">
+                                {totalRecords === 0 ? '0' : `${(page - 1) * 20 + 1} to ${Math.min(page * 20, totalRecords)}`}
+                            </span>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                                    disabled={page === 1}
+                                    className="px-3 py-1.5 text-sm font-bold text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 dark:bg-surface-elevated dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-800 transition-colors focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+                                </button>
+                                <button
+                                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={page === totalPages || totalRecords === 0}
+                                    className="px-3 py-1.5 text-sm font-bold text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 dark:bg-surface-elevated dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-800 transition-colors focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                                </button>
+                            </div>
                         </div>
                     </div>
-                )}
+                </div>
             </div>
 
             {/* Sub-components */}
