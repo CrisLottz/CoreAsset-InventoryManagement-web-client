@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { AssetTable } from './AssetTable';
 import { AssetFormModal } from './AssetFormModal';
 import { ViewEditorModal } from './ViewEditorModal'; 
+import { AssetCsvImportModal } from './AssetCsvImportModal';
 import { apiClient } from '../../services/apiClient';
 
 interface CategoryStructure {
@@ -22,6 +23,7 @@ interface InventoryViewProps {
 
 export const InventoryView = ({ categoryId }: InventoryViewProps) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
     const [isViewEditorOpen, setIsViewEditorOpen] = useState(false); 
     const [assetToEdit, setAssetToEdit] = useState<any>(null);
     const [refreshCount, setRefreshCount] = useState(0);
@@ -142,13 +144,22 @@ export const InventoryView = ({ categoryId }: InventoryViewProps) => {
                     <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{structure.name}</h1>
                     <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Dynamic asset management for the {structure.name} module.</p>
                 </div>
-                <button 
-                    onClick={handleOpenCreateModal}
-                    className="px-6 py-3 bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white font-bold rounded focus:outline-none focus:ring-2 focus:ring-primary-600 flex items-center justify-center gap-2"
-                >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
-                    <span>Register {structure.name}</span>
-                </button>
+                <div className="flex gap-2">
+                    <button 
+                        onClick={() => setIsCsvModalOpen(true)}
+                        className="px-6 py-3 bg-white hover:bg-gray-50 text-gray-700 dark:bg-surface-elevated dark:text-gray-300 dark:hover:bg-gray-800 dark:border-gray-600 border border-gray-300 font-bold rounded focus:outline-none focus:ring-2 focus:ring-primary-600 flex items-center justify-center gap-2 transition-colors"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                        <span>Import CSV</span>
+                    </button>
+                    <button 
+                        onClick={handleOpenCreateModal}
+                        className="px-6 py-3 bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white font-bold rounded focus:outline-none focus:ring-2 focus:ring-primary-600 flex items-center justify-center gap-2"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
+                        <span>Register {structure.name}</span>
+                    </button>
+                </div>
             </header>
 
             {/* Toast Notification */}
@@ -264,10 +275,22 @@ export const InventoryView = ({ categoryId }: InventoryViewProps) => {
                     isOpen={isViewEditorOpen}
                     onClose={() => setIsViewEditorOpen(false)}
                     onSave={handleSaveViewConfig}
-                    defaultFields={structure.fields}
+                    defaultFields={structure.fields.map((f: any) => ({ name: f.name, is_visible: true }))}
                     currentConfig={columnsConfig}
                 />
             )}
+
+            <AssetCsvImportModal
+                isOpen={isCsvModalOpen}
+                onClose={() => setIsCsvModalOpen(false)}
+                onSuccess={() => {
+                    setIsCsvModalOpen(false);
+                    setRefreshCount(prev => prev + 1);
+                }}
+                onRefresh={() => setRefreshCount(prev => prev + 1)}
+                categoryId={categoryId}
+                structure={structure}
+            />
         </div>
     );
 };
