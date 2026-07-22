@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # Pasa la variable de entorno al contexto de compilación (Build time)
+      args:
+        PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:8000/api/v1}
+    container_name: coreasset_frontend
+    restart: unless-stopped
+    ports:
+      - "4321:4321"
+    # Pasa variables al tiempo de ejecución (Runtime)
+    env_file:
+      - .env
+    environment:
+      - HOST=0.0.0.0
+      - PORT=4321
