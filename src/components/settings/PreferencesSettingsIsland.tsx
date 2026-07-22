@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useDateFormat } from '../../hooks/useDateFormat';
 import type { DateFormat } from '../../hooks/useDateFormat';
 import { apiClient } from '../../services/apiClient';
+import { ImageCropperModal } from './ImageCropperModal';
 
 const TooltipInfo = ({ text }: { text: string }) => (
     <div className="relative inline-flex items-center group ml-2 align-middle">
@@ -21,6 +22,9 @@ export const PreferencesSettingsIsland = () => {
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     
+    // Cropper State
+    const [selectedImageSrc, setSelectedImageSrc] = useState<string | null>(null);
+
     // Toast state
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -71,15 +75,27 @@ export const PreferencesSettingsIsland = () => {
             return;
         }
         
-        const MAX_SIZE = 2 * 1024 * 1024; // 2MB
+        const MAX_SIZE = 5 * 1024 * 1024; // 5MB limit for raw input
         if (file.size > MAX_SIZE) {
-            showToast('Image size must be less than 2MB.', 'error');
+            showToast('Initial image size must be less than 5MB.', 'error');
             target.value = '';
             return;
         }
 
+        const reader = new FileReader();
+        reader.addEventListener('load', () => {
+            setSelectedImageSrc(reader.result?.toString() || null);
+        });
+        reader.readAsDataURL(file);
+        
+        target.value = ''; // Reset input so same file can be selected again
+    };
+
+    const handleCropComplete = async (croppedFile: File) => {
+        setSelectedImageSrc(null); // Close modal
+        
         const formData = new FormData();
-        formData.append('avatar', file);
+        formData.append('avatar', croppedFile);
 
         setIsUploading(true);
         try {
@@ -92,7 +108,6 @@ export const PreferencesSettingsIsland = () => {
             if (response.data && response.data.avatar) {
                 setAvatarUrl(response.data.avatar);
                 showToast('Profile picture updated successfully', 'success');
-                // Trigger event so UserMenu can update if needed
                 window.dispatchEvent(new Event('user-updated'));
             }
         } catch (error: any) {
@@ -100,7 +115,6 @@ export const PreferencesSettingsIsland = () => {
             showToast(error.response?.data?.detail || 'Failed to update profile picture', 'error');
         } finally {
             setIsUploading(false);
-            target.value = '';
         }
     };
 
@@ -208,6 +222,15 @@ export const PreferencesSettingsIsland = () => {
 
                 </div>
             </div>
+            
+            {/* Cropper Modal */}
+            {selectedImageSrc && (
+                <ImageCropperModal
+                    imageSrc={selectedImageSrc}
+                    onClose={() => setSelectedImageSrc(null)}
+                    onCropComplete={handleCropComplete}
+                />
+            )}
         </section>
     );
 };

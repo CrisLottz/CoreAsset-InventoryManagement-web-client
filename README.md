@@ -282,6 +282,27 @@ The application will be available at `http://localhost:4321`.
 
 ---
 
+## Docker Deployment (VPS / Production)
+
+This project is fully containerized and ready for production deployment (e.g., A2 Hosting VPS, AWS, DigitalOcean).
+
+```bash
+# 1. Clone the repository on your server
+git clone https://github.com/CrisLottz/CoreAsset-InventoryManagement-web-client.git
+cd CoreAsset-InventoryManagement-web-client
+
+# 2. Configure your environment
+cp .env.example .env
+# Edit .env and set PUBLIC_API_URL to your backend's production URL
+
+# 3. Build and start the container in detached mode
+docker-compose up -d --build
+```
+
+The application will now be running on port `4321`. You can place an Nginx reverse proxy in front of it to serve it over port `80/443` with an SSL certificate.
+
+---
+
 ## Project Structure
 
 ```
